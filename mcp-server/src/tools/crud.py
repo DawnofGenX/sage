@@ -180,49 +180,57 @@ async def draft_followup_email(
 ) -> dict:
     """Draft a follow-up email using the LLM provider.
 
+    The email body and subject come from the model. The template path exists
+    only for mock mode, and the response says so via provenance.
+
     Args:
         contact: Contact name and context.
         context: Context for the email (deal info, previous conversations).
         tone: Email tone ('formal', 'friendly', 'casual').
 
     Returns:
-        A dictionary with subject and body.
+        A dictionary with subject, body, tone_used, and provenance.
     """
+    import json
+
     provider = _get_provider()
 
-    prompt = (
-        f"Write a {tone} follow-up email to {contact}. "
-        f"Context: {context}. "
-        f"Return JSON with keys 'subject' and 'body'."
-    )
+    # EMAIL_PROMPT is not transcript-shaped, so the fields travel as JSON in
+    # the provider's transcript slot.
+    request = json.dumps({"contact": contact, "context": context, "tone": tone})
+    result = await provider.extract(request, "email")
 
-    result = await provider.extract(prompt, "full")
+    provenance = getattr(provider, "last_provenance", "mock")
 
-    # The mock provider returns full extraction data, so we construct
-    # a sensible email from the context
-    subject = f"Following up: {context[:50]}"
-    body = (
-        f"Dear {contact},\n\n"
-        f"I wanted to follow up on our recent conversation. "
-        f"{context}\n\n"
-        f"Looking forward to hearing from you.\n\n"
-        f"Best regards"
-    )
+    # Only accept a model-written email when the model actually produced one.
+    # A real provider can still return something unexpected; fall back rather
+    # than ship an empty subject.
+    subject = result.get("subject") if isinstance(result, dict) else None
+    body = result.get("body") if isinstance(result, dict) else None
 
-    # If the provider returned structured data, try to use it
-    if isinstance(result, dict):
-        if "contacts" in result and result["contacts"]:
-            first_contact = result["contacts"][0]
-            if isinstance(first_contact, dict) and "name" in first_contact:
-                body = (
-                    f"Dear {first_contact['name']},\n\n"
-                    f"I wanted to follow up on our recent conversation. "
-                    f"{context}\n\n"
-                    f"Looking forward to hearing from you.\n\n"
-                    f"Best regards"
-                )
+    if provenance == "mock" or not subject or not body:
+        subject = subject or f"Following up: {context[:50]}"
+        body = body or (
+            f"Dear {contact},\n\n"
+            f"I wanted to follow up on our recent conversation. {context}\n\n"
+            f"Looking forward to hearing from you.\n\n"
+            f"Best regards"
+        )
+        return {
+            "subject": subject,
+            "body": body,
+            "tone_used": tone,
+            "provenance": provenance if provenance != "mock" else "mock",
+            "templated": True,
+        }
 
-    return {"subject": subject, "body": body}
+    return {
+        "subject": subject,
+        "body": body,
+        "tone_used": result.get("tone_used", tone),
+        "provenance": provenance,
+        "templated": False,
+    }
 
 
 async def log_call(

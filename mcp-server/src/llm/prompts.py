@@ -30,3 +30,20 @@ Return a JSON object with:
   "recommended_actions": ["action 1", "action 2", ...]
 }
 """
+
+# Added 2026-06. draft_followup_email previously reused EXTRACTION_PROMPT with
+# extraction_type="full", which asks the model to pull CRM records out of a
+# call transcript — the wrong task entirely — and then discarded the response.
+EMAIL_PROMPT = """You are a sales assistant writing a follow-up email.
+
+Write a {tone} follow-up email to {contact} about: {context}
+
+Return a JSON object with exactly these keys:
+{{
+  "subject": "a short subject line",
+  "body": "the email body, as a plain string with line breaks",
+  "tone_used": "{tone}"
+}}
+
+Write the email itself. Do not extract CRM records. Do not return commentary.
+"""

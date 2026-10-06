@@ -22,7 +22,7 @@ from typing import Any
 import httpx
 
 from llm.formats import LLMAPIFormat, detect_format, parse_json_response
-from llm.prompts import EXTRACTION_PROMPT, INSIGHTS_PROMPT
+from llm.prompts import EMAIL_PROMPT, EXTRACTION_PROMPT, INSIGHTS_PROMPT
 
 DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -202,11 +202,23 @@ class LLMProvider:
         content = self._format.extract_content(data)
         result = parse_json_response(content)
 
-        # Track token usage and cost
-        usage = data.get("usage", {})
-        prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens", 0))
-        completion_tokens = usage.get("completion_tokens", usage.get("output_tokens", 0))
-        tokens = prompt_tokens + completion_tokens
+        # Track token usage and cost.
+        #
+        # Some providers report only `total_tokens` (and some, notably OpenAI's
+        # newer responses, split it differently). Previously this read only
+        # prompt_tokens + completion_tokens and fell back to 0 when absent, so
+        # a response carrying just total_tokens was counted as zero cost —
+        # silently under-reporting spend. Prefer the provider's own total when
+        # present, and only sum the split fields as a fallback.
+        usage = data.get("usage") or {}
+        total = usage.get("total_tokens")
+        if total is None:
+            prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens", 0))
+            completion_tokens = usage.get(
+                "completion_tokens", usage.get("output_tokens", 0)
+            )
+            total = prompt_tokens + completion_tokens
+        tokens = int(total or 0)
         self.total_tokens += tokens
         self.total_cost += self._calculate_cost(tokens)
 
@@ -228,6 +240,24 @@ class LLMProvider:
         """Build the LLM prompt for a given extraction type."""
         if extraction_type == "insights":
             return INSIGHTS_PROMPT.replace("{context}", transcript)
+        if extraction_type == "email":
+            # The caller passes a JSON blob of {contact, context, tone} in the
+            # transcript slot, since this prompt is not transcript-shaped.
+            # Malformed input falls back to neutral defaults rather than
+            # raising: a malformed payload should still yield a usable prompt.
+            import json
+
+            try:
+                fields = json.loads(transcript)
+            except (TypeError, ValueError):
+                fields = {}
+            if not isinstance(fields, dict):
+                fields = {}
+            return (
+                EMAIL_PROMPT.replace("{tone}", str(fields.get("tone", "formal")))
+                .replace("{contact}", str(fields.get("contact", "there")))
+                .replace("{context}", str(fields.get("context", "our conversation")))
+            )
         return EXTRACTION_PROMPT.replace("{transcript}", transcript)
 
     # ------------------------------------------------------------------
@@ -242,9 +272,35 @@ class LLMProvider:
             "sentiment": self._mock_sentiment,
             "full": self._mock_full,
             "insights": self._mock_insights,
+            "email": self._mock_email,
         }
         handler = dispatch.get(extraction_type, self._mock_full)
         return handler(transcript)
+
+    def _mock_email(self, transcript: str) -> dict[str, Any]:
+        """Produce a template email for mock mode.
+
+        Callers must treat an email from mock provenance as templated, not
+        written. draft_followup_email sets provenance="mock" when this runs so
+        the UI can label it.
+        """
+        import json
+
+        try:
+            fields = json.loads(transcript)
+        except (TypeError, ValueError):
+            fields = {}
+        contact = fields.get("contact", "there")
+        context = fields.get("context", "our recent conversation")
+        tone = fields.get("tone", "formal")
+        subject = f"Following up: {context[:50]}"
+        body = (
+            f"Dear {contact},\n\n"
+            f"I wanted to follow up on {context}.\n\n"
+            f"Looking forward to hearing from you.\n\n"
+            f"Best regards"
+        )
+        return {"subject": subject, "body": body, "tone_used": tone}
 
     def _mock_entities(self, transcript: str) -> dict[str, Any]:
         """Extract entities using regex patterns."""
