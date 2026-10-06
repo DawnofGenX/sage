@@ -88,6 +88,13 @@ class LLMProvider:
         # Lazy Bedrock provider
         self._bedrock_provider = None
 
+        # Provenance of the most recent extract() call, and a call counter.
+        # Added 2026-06 for the truth-discipline work: consumers must be able
+        # to tell whether a value came from a real provider or a mock, without
+        # inferring it from the absence of an error.
+        self.last_provenance: str = "none"
+        self.call_count: int = 0
+
     @property
     def is_mock(self) -> bool:
         """Return True if running in mock mode (no API key and no Bedrock)."""
@@ -123,11 +130,18 @@ class LLMProvider:
         Raises:
             LLMAPIError: If the real API call fails after all retries.
         """
+        self.call_count += 1
+
         if self._use_mock:
+            self.last_provenance = "mock"
             return self._mock_extract(transcript, extraction_type)
+
         if self._use_bedrock:
+            self.last_provenance = "bedrock"
             bedrock = self._get_bedrock()
             return await bedrock.extract(transcript, extraction_type)
+
+        self.last_provenance = self._format.name
         return await self._api_extract(transcript, extraction_type)
 
     # ------------------------------------------------------------------

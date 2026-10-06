@@ -174,7 +174,7 @@ async def test_pipedrive_mock():
 @pytest.mark.asyncio
 async def test_sync_to_crm_dispatch():
     """Verify sync_to_crm dispatches to correct adapter."""
-    # Test that invalid target returns error
+    # Invalid target is rejected before any adapter is constructed.
     result = await sync_to_crm(
         record={"name": "Test"},
         target="invalid_crm",
@@ -183,32 +183,107 @@ async def test_sync_to_crm_dispatch():
     assert result["status"] == "error"
     assert "Invalid target" in result["error"]
 
-    # Test that unconfigured salesforce returns graceful fallback (mock success)
+
+# ==================================================================
+# Unconfigured CRMs must NOT report success
+# ==================================================================
+#
+# These three assertions replace ones that previously asserted
+# status == "success" for unconfigured CRMs. That behaviour was the
+# defect fixed in this task: sync_to_crm used to synthesise a record ID
+# (f"{target[:3]}_{idempotency_key[:8]}") and report success for a CRM
+# it had never contacted. Do not restore it.
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("target", ["salesforce", "hubspot", "pipedrive"])
+async def test_unconfigured_crm_reports_not_configured(target):
+    """An unconfigured CRM yields not_configured, never a fake success."""
+    result = await sync_to_crm(
+        record={"name": "Test", "email": "test@test.com"},
+        target=target,
+        idempotency_key="test-key",
+    )
+    assert result["status"] == "not_configured"
+    assert result["target"] == target
+    # No record was created anywhere, so there must be no record ID.
+    assert result["record_id"] is None
+    assert result["synced_at"] is None
+    assert result["provenance"] == "none"
+    assert result["error"]
+
+
+@pytest.mark.asyncio
+async def test_unconfigured_sync_error_is_actionable():
+    """The error must say what is missing, not merely that it failed.
+
+    NOTE: as of this commit the Salesforce adapter returns the generic
+    "Salesforce not configured". Making it name the exact env vars is
+    follow-up work; this test pins the weaker contract so the improvement
+    is a visible, deliberate change rather than an accident.
+    """
+    result = await sync_to_crm(
+        record={"name": "Test", "email": "test@test.com"},
+        target="salesforce",
+        idempotency_key="test-key",
+    )
+    assert "not configured" in result["error"].lower()
+    assert "salesforce" in result["error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_no_fabricated_record_id_anywhere_in_source():
+    """Guard against the synthesised-ID pattern being reintroduced.
+
+    The old bug was f"{target[:3]}_{idempotency_key[:8]}". If any *executable*
+    line builds a record ID from the idempotency key rather than from a real
+    provider response, fail here.
+
+    Comments and docstrings are excluded: the fix's explanatory comment quotes
+    the old expression verbatim, so a naive text scan would make this guard
+    permanently unsatisfiable.
+    """
+    import ast
+    import pathlib
+
+    sync_src = pathlib.Path(__file__).resolve().parent.parent / "src" / "tools" / "sync.py"
+    tree = ast.parse(sync_src.read_text())
+
+    # Collect identifiers named `idempotency_key` that are the base of a
+    # slice expression. Comments and docstrings are not in the AST at all, so
+    # this cannot match prose.
+    offenders = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Subscript)
+        and isinstance(node.slice, ast.Slice)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "idempotency_key"
+    ]
+    assert not offenders, (
+        "sync.py slices `idempotency_key` — that was how the fabricated "
+        f"record ID was built ({len(offenders)} occurrence(s)). A record ID "
+        "must come from a provider response, never be synthesised locally."
+    )
+
+
+@pytest.mark.asyncio
+async def test_successful_sync_reports_real_provenance(monkeypatch):
+    """When an adapter really succeeds, provenance names the real CRM."""
+    class StubAdapter:
+        async def create_contact(self, contact):
+            return {"id": "003A000001ABC", "status": "created"}
+
+    # Patch the name as bound in tools/sync.py's globals, so the stub is the
+    # adapter the tool actually constructs. (Pyright cannot resolve "tools.*"
+    # because src/ is not on its analysis path; the runtime import works
+    # because the project is pip-installed. Verified by this test passing.)
+    monkeypatch.setattr("tools.sync.SalesforceSync", StubAdapter)
     result = await sync_to_crm(
         record={"name": "Test", "email": "test@test.com"},
         target="salesforce",
         idempotency_key="test-key",
     )
     assert result["status"] == "success"
-    assert result["target"] == "salesforce"
-    assert result["record_id"] is not None
-
-    # Test that unconfigured hubspot returns graceful fallback
-    result = await sync_to_crm(
-        record={"name": "Test", "email": "test@test.com"},
-        target="hubspot",
-        idempotency_key="test-key",
-    )
-    assert result["status"] == "success"
-    assert result["target"] == "hubspot"
-    assert result["record_id"] is not None
-
-    # Test that unconfigured pipedrive returns graceful fallback
-    result = await sync_to_crm(
-        record={"name": "Test", "email": "test@test.com"},
-        target="pipedrive",
-        idempotency_key="test-key",
-    )
-    assert result["status"] == "success"
-    assert result["target"] == "pipedrive"
-    assert result["record_id"] is not None
+    assert result["record_id"] == "003A000001ABC"
+    assert result["provenance"] == "salesforce"

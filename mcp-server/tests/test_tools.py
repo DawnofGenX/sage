@@ -367,7 +367,12 @@ async def test_search_contacts():
 
 @pytest.mark.asyncio
 async def test_sync_to_crm():
-    """Verify sync."""
+    """An unconfigured CRM reports not_configured, not a fake success.
+
+    This test previously asserted status == "success" with a non-null
+    record_id for a Salesforce that was never contacted — the fabricated-
+    success defect. Do not restore those assertions.
+    """
     record = {"name": "Sync Test", "email": "sync@test.com"}
     result = await sync.sync_to_crm(
         record=record,
@@ -375,11 +380,13 @@ async def test_sync_to_crm():
         idempotency_key="test-key-123",
     )
 
-    assert result["status"] == "success"
+    assert result["status"] == "not_configured"
     assert result["target"] == "salesforce"
-    assert result["record_id"] is not None
+    assert result["record_id"] is None
     assert result["idempotency_key"] == "test-key-123"
-    assert result["synced_at"] is not None
+    assert result["synced_at"] is None
+    assert result["provenance"] == "none"
+    assert result["error"]
 
 
 # ==================================================================

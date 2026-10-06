@@ -56,15 +56,23 @@ async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
         result = await adapter.create_contact(record)
 
     if "error" in result:
-        # Graceful fallback: return mock success when CRM not configured
-        # so callers get a consistent response shape
-        record_id = f"{target[:3]}_{idempotency_key[:8]}"
+        # Do NOT fabricate success here.
+        #
+        # This branch previously returned status="success" with a synthesised
+        # record_id (f"{target[:3]}_{idempotency_key[:8]}") so callers would see
+        # a consistent response shape. That was a lie: the CRM was never
+        # contacted, and anyone running without credentials saw "Synced to
+        # Salesforce" for a record that did not exist. See
+        # docs/superpowers/specs/2026-10-06-truth-and-agentic-chaining-design.md
+        # section 1.2.
         return {
-            "status": "success",
+            "status": "not_configured",
             "target": target,
-            "record_id": record_id,
+            "record_id": None,
             "idempotency_key": idempotency_key,
-            "synced_at": datetime.now(timezone.utc).isoformat(),
+            "synced_at": None,
+            "error": result["error"],
+            "provenance": "none",
         }
 
     return {
@@ -73,4 +81,5 @@ async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
         "record_id": result["id"],
         "idempotency_key": idempotency_key,
         "synced_at": datetime.now(timezone.utc).isoformat(),
+        "provenance": target,
     }

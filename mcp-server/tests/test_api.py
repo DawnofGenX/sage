@@ -127,13 +127,18 @@ def test_search_contacts(client):
 
 
 def test_sync_to_crm(client):
-    """POST /api/tools/sync_to_crm returns sync result."""
+    """POST /api/tools/sync_to_crm surfaces the honest unconfigured result.
+
+    Previously asserted status == "success" with a non-null record_id for a
+    Salesforce that was never contacted. Do not restore those assertions.
+    """
     response = client.post("/api/tools/sync_to_crm", json={"record": {"name": "Test"}, "target": "salesforce", "idempotency_key": "key123"})
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "success"
+    assert data["status"] == "not_configured"
     assert data["target"] == "salesforce"
-    assert data["record_id"] is not None
+    assert data["record_id"] is None
+    assert data["provenance"] == "none"
 
 
 def test_tool_not_found(client):
