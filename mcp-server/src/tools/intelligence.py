@@ -5,6 +5,13 @@ from datetime import datetime, timedelta
 
 from data.db import Database
 from llm.provider import LLMProvider
+from tools.schemas import (
+    DailyBriefing,
+    DealInsights,
+    FollowupsResponse,
+    SearchResponse,
+    WeeklyReview,
+)
 
 _db = None
 _provider = None
@@ -25,7 +32,7 @@ def _get_provider() -> LLMProvider:
     return _provider
 
 
-async def get_deal_insights(deal_id: int) -> dict:
+async def get_deal_insights(deal_id: int) -> DealInsights:
     """Get AI-powered insights for a specific deal.
 
     Args:
@@ -92,7 +99,7 @@ async def get_deal_insights(deal_id: int) -> dict:
     }
 
 
-async def get_daily_briefing() -> dict:
+async def get_daily_briefing() -> DailyBriefing:
     """Get a daily briefing with key metrics and action items.
 
     Returns:
@@ -133,7 +140,7 @@ async def get_daily_briefing() -> dict:
     }
 
 
-async def get_todays_followups() -> dict:
+async def get_todays_followups() -> FollowupsResponse:
     """Get prioritized follow-ups for today.
 
     Returns:
@@ -174,7 +181,7 @@ async def get_todays_followups() -> dict:
     }
 
 
-async def get_weekly_review() -> dict:
+async def get_weekly_review() -> WeeklyReview:
     """Get a weekly review of sales activity.
 
     Returns:
@@ -229,7 +236,7 @@ async def get_weekly_review() -> dict:
     }
 
 
-async def search_contacts(query: str) -> dict:
+async def search_contacts(query: str) -> SearchResponse:
     """Search contacts by name, company, or email.
 
     Args:

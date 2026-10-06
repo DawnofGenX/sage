@@ -4,6 +4,14 @@ from datetime import datetime, timedelta
 
 from data.db import Database
 from llm.provider import LLMProvider
+from tools.schemas import (
+    ActivitiesResponse,
+    CompanyContext,
+    CreatedRecord,
+    DealHistory,
+    EnrichmentResponse,
+    ForecastResponse,
+)
 
 _db = None
 _provider = None
@@ -24,7 +32,7 @@ def _get_provider() -> LLMProvider:
     return _provider
 
 
-async def get_company_context(company_name: str) -> dict:
+async def get_company_context(company_name: str) -> CompanyContext:
     """Get full context for a company including all contacts, deals, and interactions.
 
     Args:
@@ -78,7 +86,7 @@ async def get_company_context(company_name: str) -> dict:
     }
 
 
-async def get_activities(contact_id: int = None, deal_id: int = None) -> dict:
+async def get_activities(contact_id: int = None, deal_id: int = None) -> ActivitiesResponse:
     """Get all activities filtered by contact and/or deal.
 
     Args:
@@ -97,7 +105,7 @@ async def get_activities(contact_id: int = None, deal_id: int = None) -> dict:
     }
 
 
-async def get_deal_history(deal_id: int) -> dict:
+async def get_deal_history(deal_id: int) -> DealHistory:
     """Get the full history of a deal including stage progression, all interactions, and timeline.
 
     Args:
@@ -130,7 +138,7 @@ async def create_task(
     due_date: str = None,
     priority: str = "medium",
     notes: str = None,
-) -> dict:
+) -> CreatedRecord:
     """Create a general task (broader than just follow-ups).
 
     Args:
@@ -152,10 +160,13 @@ async def create_task(
         "notes": notes,
     }
     task_id = db.create_task(data)
+    # Annotated -> CreatedRecord so FastMCP publishes a typed output schema;
+    # a plain dict is returned at runtime so dict-style callers keep working.
+    # This mirrors create_contact/create_deal in crud.py.
     return {"id": task_id, "title": title, "created": True}
 
 
-async def enrich_contact(contact_id: int) -> dict:
+async def enrich_contact(contact_id: int) -> EnrichmentResponse:
     """Enrich a contact with external data (LinkedIn, ZoomInfo, etc.).
 
     This is a mock implementation that returns realistic enrichment data.
@@ -206,7 +217,7 @@ async def enrich_contact(contact_id: int) -> dict:
     }
 
 
-async def get_forecast(timeframe: str = "month") -> dict:
+async def get_forecast(timeframe: str = "month") -> ForecastResponse:
     """Get revenue forecast based on pipeline.
 
     Args:

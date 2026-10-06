@@ -5,6 +5,7 @@ from aws.s3 import S3Storage
 from data.db import Database
 from extraction.pipeline import ExtractionPipeline
 from llm.provider import LLMProvider
+from tools.schemas import ContactContext, ExtractionResult, PipelineHealth
 
 _db = None
 _pipeline = None
@@ -34,7 +35,7 @@ def _get_s3() -> S3Storage:
     return _s3
 
 
-async def extract_from_call(transcript: str, audio_url: str | None = None) -> dict:
+async def extract_from_call(transcript: str, audio_url: str | None = None) -> ExtractionResult:
     """Process a call transcript through the two-pass extraction pipeline.
 
     Two real LLM passes run (entities + intent concurrently, then the
@@ -113,7 +114,7 @@ async def get_contact_context(
     name: str,
     include_history: bool = True,
     include_deals: bool = True,
-) -> dict:
+) -> ContactContext:
     """Search for a contact by name and return full context.
 
     Args:
@@ -152,7 +153,7 @@ async def get_contact_context(
 async def get_pipeline_health(
     timeframe: str = "week",
     include_sentiment: bool = True,
-) -> dict:
+) -> PipelineHealth:
     """Get pipeline health metrics.
 
     Args:

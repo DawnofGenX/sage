@@ -5,13 +5,15 @@ from datetime import datetime, timezone
 
 from sync import SalesforceSync, HubSpotSync, PipedriveSync, LocalCRMSync
 
+from tools.schemas import SyncResult
+
 # "local" is Sage's own CRM tables. It is always available — there are no
 # credentials to configure — so it is the target the demo uses when no external
 # CRM is set up. It is a real implementation with real stored rows, not a stub.
 VALID_TARGETS = {"salesforce", "hubspot", "pipedrive", "local"}
 
 
-async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
+async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> SyncResult:
     """Sync a record to an external CRM system.
 
     Uses real CRM adapters for Salesforce, HubSpot, and Pipedrive, plus Sage's

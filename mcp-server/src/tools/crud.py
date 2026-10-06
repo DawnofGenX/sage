@@ -4,6 +4,7 @@ import os
 
 from data.db import Database
 from llm.provider import LLMProvider
+from tools.schemas import CreatedRecord, EmailDraft, UpdatedRecord
 
 _db = None
 _provider = None
@@ -31,7 +32,7 @@ async def create_contact(
     phone: str = None,
     title: str = None,
     notes: str = None,
-) -> dict:
+) -> CreatedRecord:
     """Create a new contact.
 
     Args:
@@ -66,7 +67,7 @@ async def update_contact(
     phone: str = None,
     title: str = None,
     notes: str = None,
-) -> dict:
+) -> UpdatedRecord:
     """Update an existing contact.
 
     Args:
@@ -101,7 +102,7 @@ async def create_deal(
     value: float = None,
     stage: str = "lead",
     notes: str = None,
-) -> dict:
+) -> CreatedRecord:
     """Create a new deal.
 
     Args:
@@ -126,7 +127,7 @@ async def create_deal(
     return {"id": deal_id, "title": title, "created": True}
 
 
-async def update_deal_stage(deal_id: int, stage: str) -> dict:
+async def update_deal_stage(deal_id: int, stage: str) -> UpdatedRecord:
     """Update a deal's stage.
 
     Args:
@@ -148,7 +149,7 @@ async def schedule_followup(
     due_date: str,
     deal_id: int = None,
     notes: str = None,
-) -> dict:
+) -> CreatedRecord:
     """Schedule a follow-up task.
 
     Args:
@@ -177,7 +178,7 @@ async def draft_followup_email(
     contact: str,
     context: str,
     tone: str = "formal",
-) -> dict:
+) -> EmailDraft:
     """Draft a follow-up email using the LLM provider.
 
     The email body and subject come from the model. The template path exists
@@ -239,7 +240,7 @@ async def log_call(
     summary: str = None,
     duration_seconds: int = None,
     deal_id: int = None,
-) -> dict:
+) -> CreatedRecord:
     """Log a call record.
 
     Args:

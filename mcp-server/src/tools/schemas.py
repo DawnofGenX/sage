@@ -6,6 +6,8 @@ use ``model_config = ConfigDict(extra="allow")`` so an added field never
 breaks a consumer.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -269,11 +271,64 @@ class SyncResult(ProvenanceMixin):
 
 
 class GenericRecord(BaseModel):
-    """Fallback output model for expansion tools.
+    """Fallback output model for expansion tools whose shape is not yet fixed.
 
-    Used by get_company_context, get_activities, get_deal_history,
-    enrich_contact, and get_forecast. These tools return varied shapes;
-    extra="allow" ensures forward compatibility.
+    NOTE: an empty model with extra="allow" generates NO `properties`, so a
+    tool annotated with it still publishes a bare
+    `{"type": "object", "additionalProperties": true}` — the same schema the
+    untyped `-> dict` produced. That is why each expansion tool now has its
+    own model below instead of sharing this one. Kept only for tools whose
+    response genuinely varies per query.
     """
 
     model_config = ConfigDict(extra="allow")
+
+
+class CompanyContext(BaseModel):
+    """Output of get_company_context."""
+
+    model_config = ConfigDict(extra="allow")
+    company: str | None = None
+    contacts: list[dict[str, Any]] = []
+    deals: list[dict[str, Any]] = []
+    total_value: float = 0.0
+    health: str | None = None
+
+
+class ActivitiesResponse(BaseModel):
+    """Output of get_activities."""
+
+    model_config = ConfigDict(extra="allow")
+    activities: list[dict[str, Any]] = []
+    total: int = 0
+
+
+class DealHistory(BaseModel):
+    """Output of get_deal_history."""
+
+    model_config = ConfigDict(extra="allow")
+    deal: dict[str, Any] | None = None
+    stage_history: list[dict[str, Any]] = []
+    interactions: list[dict[str, Any]] = []
+    timeline: list[dict[str, Any]] = []
+
+
+class EnrichmentResponse(BaseModel):
+    """Output of enrich_contact."""
+
+    model_config = ConfigDict(extra="allow")
+    contact: dict[str, Any] | None = None
+    enriched: bool = False
+    data: dict[str, Any] = {}
+
+
+class ForecastResponse(BaseModel):
+    """Output of get_forecast."""
+
+    model_config = ConfigDict(extra="allow")
+    forecast: list[dict[str, Any]] = []
+    total_pipeline: float = 0.0
+    weighted_forecast: float = 0.0
+    best_case: float = 0.0
+    worst_case: float = 0.0
+    confidence: str | float | None = None
