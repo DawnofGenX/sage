@@ -1,0 +1,102 @@
+[
+  {
+    "id": "eval-01",
+    "transcript": "Hi Marcus, this is Priya from Sage. Thanks for taking the call today. So we spoke briefly at the SaaS conference last week — you mentioned your team at Northwind Analytics is evaluating CRM tools. We'd love to set up a demo. Our enterprise plan runs about $45,000 a year, and we could have you onboarded by March 15th if we kick off next week.",
+    "expected": {
+      "people": ["Marcus", "Priya"],
+      "companies": ["Northwind Analytics", "Sage"],
+      "amounts": ["$45,000"],
+      "dates": ["March 15th", "next week"]
+    }
+  },
+  {
+    "id": "eval-02",
+    "transcript": "Hey David, it's Rachel from Sage. Just following up on our conversation from last Tuesday. You were going to check with your team at BlueRiver Systems about the proposal we sent over. Any updates on that? Great — so if we can get signatures by April 3rd, we can still hit your Q2 start date. Does that work for you, or do you need more time?",
+    "expected": {
+      "people": ["David", "Rachel"],
+      "companies": ["BlueRiver Systems", "Sage"],
+      "amounts": [],
+      "dates": ["last Tuesday", "April 3rd", "Q2"]
+    }
+  },
+  {
+    "id": "eval-03",
+    "transcript": "Hi Jennifer, this is Tom from Sage. I wanted to go over the revised quote for Vertex Solutions. We can bring the annual cost down to $78,500 if you commit to a two-year term. You mentioned $65,000 was your ceiling — can we meet in the middle at $72,000? Let's aim to close by the end of the month, if possible.",
+    "expected": {
+      "people": ["Jennifer", "Tom"],
+      "companies": ["Vertex Solutions", "Sage"],
+      "amounts": ["$78,500", "$65,000", "$72,000"],
+      "dates": ["end of the month"]
+    }
+  },
+  {
+    "id": "eval-04",
+    "transcript": "Hey Kevin, it's Lisa from Sage. I saw you're also talking to Salesforce and HubSpot. I totally understand — they're great products, and they're the safe choice. But our analytics dashboard is purpose-built for mid-market teams like yours at Pinnacle Health. Want me to send over a comparison sheet so you can see the differences side by side? I think you'll find our pricing is very competitive.",
+    "expected": {
+      "people": ["Kevin", "Lisa"],
+      "companies": ["Salesforce", "HubSpot", "Pinnacle Health", "Sage"],
+      "amounts": [],
+      "dates": []
+    }
+  },
+  {
+    "id": "eval-05",
+    "transcript": "Hi Amanda, this is Chris from Sage. I know $32,000 is a significant investment for a company like Cascade Manufacturing. But if we phase the rollout — starting with just the sales team at $18,000 — does that make it easier to get approval this quarter? We can always expand to the rest of the organization later, once you see the value.",
+    "expected": {
+      "people": ["Amanda", "Chris"],
+      "companies": ["Cascade Manufacturing", "Sage"],
+      "amounts": ["$32,000", "$18,000"],
+      "dates": ["this quarter"]
+    }
+  },
+  {
+    "id": "eval-06",
+    "transcript": "Thanks everyone for joining. This is Jordan from Sage. I have Michael Torres and Susan Park from DataForge on the line, plus their CFO Robert Chen. Michael, you wanted to discuss pricing for 200 seats. We're looking at $95,000 for the enterprise tier. Susan, does that work with your budget? Robert, any concerns about the implementation timeline or the training plan?",
+    "expected": {
+      "people": ["Jordan", "Michael Torres", "Susan Park", "Robert Chen"],
+      "companies": ["DataForge", "Sage"],
+      "amounts": ["$95,000"],
+      "dates": []
+    }
+  },
+  {
+    "id": "eval-07",
+    "transcript": "Hi, I'm calling about a software purchase. Can you tell me about your pricing? Sure, which product are you interested in? The enterprise CRM. Okay, and what does that include? It covers up to 50 users, email integration, and our analytics dashboard. Okay, thanks. I'll think about it. Sure, feel free to call back anytime. Thanks. You're welcome. Have a good day!",
+    "expected": {
+      "people": [],
+      "companies": [],
+      "amounts": [],
+      "dates": []
+    }
+  },
+  {
+    "id": "eval-08",
+    "transcript": "Hi, this is Sage calling. We noticed your company, Redwood Logistics, downloaded our whitepaper on supply chain analytics last month. We'd love to schedule a brief call to walk you through the platform and answer any questions you might have. Our team is available Tuesday or Thursday afternoon. Which works better for you, morning or afternoon? We can also do a demo if you'd like.",
+    "expected": {
+      "people": [],
+      "companies": ["Redwood Logistics", "Sage"],
+      "amounts": [],
+      "dates": ["Tuesday", "Thursday"]
+    }
+  },
+  {
+    "id": "eval-09",
+    "transcript": "Hey Daniel, it's Megan from Sage. So for the full rollout at Quantum Dynamics, we're talking about $1.2M annually. I know that sounds steep, but it includes dedicated support and custom integrations. If we trim it down to just the core platform, we can get it closer to eight hundred thousand. What works for your budget, and when were you looking to start?",
+    "expected": {
+      "people": ["Daniel", "Megan"],
+      "companies": ["Quantum Dynamics", "Sage"],
+      "amounts": ["$1.2M", "eight hundred thousand"],
+      "dates": []
+    }
+  },
+  {
+    "id": "eval-10",
+    "transcript": "Hi, I'm trying to reach someone about a software subscription. Is this the right number? Oh, I must have dialed wrong. Sorry to bother you. Have a great day. No, I don't need anything else. Thanks anyway. Bye. Wait, do you know the correct number? No? Okay, thanks. Bye. I'll try looking it up online. Thanks for your time. Have a good one!",
+    "expected": {
+      "people": [],
+      "companies": [],
+      "amounts": [],
+      "dates": []
+    }
+  }
+]
