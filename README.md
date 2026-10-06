@@ -25,9 +25,25 @@ cd sage
 docker compose up
 
 # Or run locally
-cd mcp-server && pip install -r requirements.txt && python -m src.data.seed && python -m uvicorn src.api.rest:app --port 8000
+cd mcp-server
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -e .          # required: installs src/ as a package
+.venv/bin/python -m src.data.seed
+.venv/bin/python -m uvicorn src.api.rest:app --port 8000
 cd web-simulator && npm install && npm run dev
 ```
+
+### Running the tests
+
+```bash
+cd mcp-server
+.venv/bin/python -m pytest tests/ -q     # expect: 163 passed
+```
+
+The `pip install -e .` step is not optional. The suite imports `from tools.crud
+import ...`, so `src/` must be installed as a package; with dependencies alone
+you get 13 collection errors (`No module named 'tools'`) and zero tests run.
 
 ## MCP Tools
 

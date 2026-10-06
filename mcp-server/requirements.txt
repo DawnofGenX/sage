@@ -16,3 +16,24 @@ pytest-asyncio>=0.23
 # pygments is a hard import of pytest's terminal writer; omitting it fails at
 # collection with a confusing ModuleNotFoundError traceback.
 pygments>=2
+
+# ---------------------------------------------------------------------------
+# SETUP — read this before assuming `pip install -r requirements.txt` is enough
+#
+# It is NOT. The test suite does `from data.db import Database` and
+# `from tools.crud import ...`, i.e. it treats src/ as the import root. Those
+# imports only resolve once the PROJECT ITSELF is installed. With dependencies
+# alone you get 13 collection errors of the form:
+#
+#     ModuleNotFoundError: No module named 'tools'
+#
+# Full clean-checkout setup:
+#
+#     python3 -m venv .venv
+#     .venv/bin/pip install -r requirements.txt
+#     .venv/bin/pip install -e .          # <- required; installs src/ as a package
+#     .venv/bin/python -m pytest tests/ -q
+#
+# Verified 2026-10-06: with the editable install, 163 passed.
+# Without it, 13 collection errors and zero tests run.
+# ---------------------------------------------------------------------------
