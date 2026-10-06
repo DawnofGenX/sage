@@ -3,24 +3,29 @@
 import os
 from datetime import datetime, timezone
 
-from sync import SalesforceSync, HubSpotSync, PipedriveSync
+from sync import SalesforceSync, HubSpotSync, PipedriveSync, LocalCRMSync
 
-VALID_TARGETS = {"salesforce", "hubspot", "pipedrive"}
+# "local" is Sage's own CRM tables. It is always available — there are no
+# credentials to configure — so it is the target the demo uses when no external
+# CRM is set up. It is a real implementation with real stored rows, not a stub.
+VALID_TARGETS = {"salesforce", "hubspot", "pipedrive", "local"}
 
 
 async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
     """Sync a record to an external CRM system.
 
-    Uses real CRM adapters for Salesforce, HubSpot, and Pipedrive.
-    Returns an error if the target CRM is not configured.
+    Uses real CRM adapters for Salesforce, HubSpot, and Pipedrive, plus Sage's
+    own "local" CRM. Returns not_configured when the target CRM has no
+    credentials — it never reports success for a record it did not create.
 
     Args:
         record: The record data to sync.
-        target: Target CRM system ('salesforce', 'hubspot', 'pipedrive').
+        target: Target CRM system ('salesforce', 'hubspot', 'pipedrive', 'local').
         idempotency_key: Unique key to prevent duplicate syncs.
 
     Returns:
-        A dictionary with status, target, record_id, idempotency_key, synced_at.
+        A dictionary with status, target, record_id, idempotency_key,
+        synced_at, and provenance.
     """
     if target not in VALID_TARGETS:
         return {
@@ -29,7 +34,8 @@ async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
             "record_id": None,
             "idempotency_key": idempotency_key,
             "synced_at": None,
-            "error": f"Invalid target. Must be one of: {', '.join(VALID_TARGETS)}",
+            "provenance": "none",
+            "error": f"Invalid target. Must be one of: {', '.join(sorted(VALID_TARGETS))}",
         }
 
     # Select the appropriate adapter
@@ -39,21 +45,29 @@ async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
         adapter = HubSpotSync()
     elif target == "pipedrive":
         adapter = PipedriveSync()
-    else:
+    elif target == "local":
+        adapter = LocalCRMSync()
+    else:  # pragma: no cover - unreachable given VALID_TARGETS
         return {
             "status": "error",
             "target": target,
             "record_id": None,
             "idempotency_key": idempotency_key,
             "synced_at": None,
+            "provenance": "none",
             "error": f"Unknown target: {target}",
         }
 
+    # The local adapter derives its record ID from the idempotency key, so it
+    # must receive that key in the payload. External CRMs ignore it.
+    payload = dict(record)
+    payload["idempotency_key"] = idempotency_key
+
     # Determine if this is a contact or deal sync
     if "title" in record or "amount" in record or "stage" in record:
-        result = await adapter.create_deal(record)
+        result = await adapter.create_deal(payload)
     else:
-        result = await adapter.create_contact(record)
+        result = await adapter.create_contact(payload)
 
     if "error" in result:
         # Do NOT fabricate success here.
@@ -73,6 +87,19 @@ async def sync_to_crm(record: dict, target: str, idempotency_key: str) -> dict:
             "synced_at": None,
             "error": result["error"],
             "provenance": "none",
+        }
+
+    # A repeated idempotency key is a real, successful no-op: the first sync
+    # created the record, and this one correctly declined to duplicate it.
+    # Reported distinctly from "created" so a caller can tell them apart.
+    if result.get("status") == "already_synced":
+        return {
+            "status": "already_synced",
+            "target": target,
+            "record_id": result.get("id"),
+            "idempotency_key": idempotency_key,
+            "synced_at": None,
+            "provenance": target,
         }
 
     return {
