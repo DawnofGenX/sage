@@ -1,0 +1,14 @@
+{
+  "name": "sage-alexa-skill",
+  "version": "1.0.0",
+  "description": "Sage Alexa+ Skill",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/test_skill.js"
+  },
+  "dependencies": {
+    "ask-sdk-core": "^2.14.0",
+    "ask-sdk-model": "^1.19.0",
+    "axios": "^1.6.0"
+  }
+}

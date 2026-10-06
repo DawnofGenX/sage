@@ -1,0 +1,37 @@
+Call Transcript — Mike Johnson, Globex
+Date: 2026-09-30
+Duration: 18:22
+
+[Start of call]
+
+Rep: Mike, good to connect again. Last time we spoke you mentioned you were evaluating a few vendors. Where are things landing?
+
+Mike: Yeah, so we've narrowed it down to you and one other platform. I'll be honest — their pricing is about 15% lower than what you quoted us.
+
+Rep: I appreciate the transparency, Mike. Can I ask what's driving the price sensitivity? Is it the total contract value, or is there a specific feature gap?
+
+Mike: It's mostly the contract value. We're a 200-person org and the per-seat cost adds up fast. The other vendor is offering us a platform-wide license for $120K, which is hard to ignore.
+
+Rep: I hear you. Let me ask this — have you factored in the integration costs? Our platform natively integrates with your existing CI/CD pipeline and your data warehouse. The other vendor would require a custom middleware layer, which I've seen run $30-40K in engineering time alone.
+
+Mike: Hmm, I didn't know that. Our CTO would definitely care about that.
+
+Rep: Absolutely. And beyond integration, our uptime SLA is 99.99% with dedicated failover. The other vendor's standard SLA is 99.5%. For a platform your size, that difference matters.
+
+Mike: Okay, that's compelling. But I still need to justify the delta to my board. Can you do anything on price?
+
+Rep: I can't move on the base per-seat cost, but I can offer a 10% discount on a two-year commitment. That brings your effective cost down to about $108K annually, which is very competitive when you factor in the integration savings.
+
+Mike: A two-year commitment... let me think about that. What does the renewal look like after year two?
+
+Rep: Renewal is locked at the same rate for the duration of the contract. No escalators.
+
+Mike: Alright, let me discuss this with our procurement team. I should have an answer by Friday.
+
+Rep: Sounds good, Mike. I'll send over a revised proposal with the two-year terms so you have something concrete to bring to your team.
+
+Mike: Perfect. Thanks for working with me on this.
+
+Rep: Of course. Talk Friday.
+
+[End of call]

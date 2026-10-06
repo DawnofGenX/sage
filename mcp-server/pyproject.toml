@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sage-mcp-server"
+version = "1.0.0"
+description = "Sage — passive sales intelligence layer"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=2.0",
+    "uvicorn>=0.20",
+    "pydantic>=2.0",
+    "httpx>=0.25",
+    "python-dotenv>=1.0",
+    "boto3>=1.34",
+    "ask-sdk>=1.14",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

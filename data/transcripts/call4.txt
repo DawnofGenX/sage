@@ -1,0 +1,37 @@
+Call Transcript — Lisa Wayne, Wayne Enterprises
+Date: 2026-10-02
+Duration: 15:10
+
+[Start of call]
+
+Rep: Hi Lisa, thanks for making time. David Stark at Stark Industries gave me your name — he said you might be looking at a similar platform deployment.
+
+Lisa: Yes, David's been raving about your team since they signed. We're in a similar boat — we need something that can handle our compliance requirements and scale across about 50 users to start.
+
+Rep: Great context. What does your compliance landscape look like? Are we talking SOC 2, HIPAA, or something else?
+
+Lisa: SOC 2 Type II is the baseline, but we also need GDPR compliance for our EU operations. And audit trails — our auditors are very particular about access logs.
+
+Rep: We're SOC 2 Type II certified and GDPR compliant out of the box. Audit trails are granular — you can track every action by user, timestamp, and IP address. We also offer automated compliance reporting.
+
+Lisa: That's exactly what I need to hear. What about pricing for 50 seats?
+
+Rep: For 50 seats on our enterprise plan, we're looking at $75,000 annually. That includes the compliance reporting, dedicated support, and SSO.
+
+Lisa: That's in budget. David mentioned you were easy to work with, which is half the battle with vendors.
+
+Rep: I'll take that compliment! What's your timeline? Are you looking to go live this quarter?
+
+Lisa: Ideally, yes. We have a board meeting in November and I'd love to show them a working platform.
+
+Rep: Very doable. If we kick off by October 10th, we can have you live by early November. I'd suggest we start with a technical discovery call next week to map out your requirements.
+
+Lisa: Let's do it. Send me some times and I'll get it on the calendar.
+
+Rep: Will do. I'll also send over our security whitepaper and SOC 2 report so you can share with your compliance team ahead of the discovery call.
+
+Lisa: Perfect. Thanks for the quick call — I have a good feeling about this.
+
+Rep: Me too, Lisa. Talk soon.
+
+[End of call]

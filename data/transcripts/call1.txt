@@ -1,0 +1,29 @@
+Call Transcript — Sarah Chen, Acme Corp
+Date: 2026-09-28
+Duration: 12:34
+
+[Start of call]
+
+Rep: Hi Sarah, thanks for taking the time today. I wanted to follow up on the demo your team attended last week.
+
+Sarah: Yeah, no problem. Honestly, the demo was impressive. My engineers were asking about the API rate limits and whether we could white-label the dashboard.
+
+Rep: Great questions. On rate limits, the enterprise tier supports up to 10,000 requests per minute with burst capacity. White-labeling is available on the enterprise plan as well — we can customize the logo, color scheme, and even the login domain.
+
+Sarah: That's exactly what we need. We're looking at rolling this out to about 20 seats across our platform and infrastructure teams. What does pricing look like for that?
+
+Rep: For 20 seats on enterprise, we're looking at $50,000 annually. That includes dedicated support, SSO integration, and the white-label features. We also throw in a quarterly business review.
+
+Sarah: $50K... that's within the budget we discussed with finance. They already approved the line item last sprint. The main concern is onboarding time — we need this live before Q4 ends.
+
+Rep: Understood. Our typical enterprise onboarding takes about two weeks, including SSO setup and data migration. If we kick off by October 15th, you'd be fully operational well before Q4 close.
+
+Sarah: Perfect. Can you send over a proposal with those terms? I'll review it with my director and we should be able to move quickly.
+
+Rep: Absolutely. I'll have the proposal in your inbox by end of day tomorrow. Anything else I can help with?
+
+Sarah: No, that covers it. Thanks for the quick turnaround.
+
+Rep: My pleasure, Sarah. Talk soon.
+
+[End of call]

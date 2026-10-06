@@ -1,0 +1,21 @@
+services:
+  mcp-server:
+    build: ./mcp-server
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_API_URL=${LLM_API_URL}
+      - LLM_MODEL=${LLM_MODEL}
+    volumes:
+      - sage-data:/app/data
+
+  web-simulator:
+    build: ./web-simulator
+    ports:
+      - "3000:80"
+    depends_on:
+      - mcp-server
+
+volumes:
+  sage-data:

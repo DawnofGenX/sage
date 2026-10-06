@@ -1,0 +1,7 @@
+[
+  {"contact": "Sarah Chen", "title": "Acme Enterprise License", "value": 50000, "stage": "proposal", "notes": "Interested in enterprise plan for 20 seats. Budget approved. Follow up next Tuesday."},
+  {"contact": "Mike Johnson", "title": "Globex Platform Deal", "value": 120000, "stage": "negotiation", "notes": "Evaluating competitors. Budget approved. Need to discuss pricing."},
+  {"contact": "Jennifer Williams", "title": "Initech Team Plan", "value": 25000, "stage": "lead", "notes": "Just started evaluation. Interested in team features."},
+  {"contact": "David Stark", "title": "Stark Custom Deployment", "value": 200000, "stage": "closed_won", "notes": "Signed annual contract. Rollout starts next month."},
+  {"contact": "Lisa Wayne", "title": "Wayne Enterprise Rollout", "value": 75000, "stage": "lead", "notes": "Referred by David Stark. Very interested."}
+]

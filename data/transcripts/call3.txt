@@ -1,0 +1,33 @@
+Call Transcript — David Stark, Stark Industries
+Date: 2026-10-01
+Duration: 08:45
+
+[Start of call]
+
+Rep: David, congratulations again on the signed contract. I wanted to touch base on the rollout timeline.
+
+David: Thanks! We're excited to get started. The board was impressed with the security audit results — that was the deciding factor for us.
+
+Rep: Glad to hear it. So here's what the next 30 days look like. Week one, we'll provision your dedicated environment and configure SSO with your Okta instance. Week two, we'll migrate your historical data and run validation tests. Weeks three and four are user training and go-live.
+
+David: That's faster than I expected. Who's our point of contact on the technical side?
+
+Rep: I'll be your dedicated solutions engineer. You'll have my direct line and email. We'll also set up a shared Slack channel for real-time communication during the rollout.
+
+David: Good. I want my team leads to be involved in the training sessions. Can we schedule those for the week of October 20th?
+
+Rep: Absolutely. I'll send calendar invites for three training sessions — one for admins, one for power users, and one for general users. Each session is about 90 minutes.
+
+David: Perfect. And the custom deployment piece — the on-prem connector for our legacy systems?
+
+Rep: That's part of the week two workstream. Our team will need about three days to configure and test the connector. We'll coordinate with your infrastructure team on firewall rules and network access.
+
+David: I'll loop in our infra lead. Anything else from your side?
+
+Rep: Just the kickoff document. I'll send that over today. Once you sign off, we're officially underway.
+
+David: Consider it signed off. Let's do this.
+
+Rep: Excellent. Welcome aboard, David.
+
+[End of call]

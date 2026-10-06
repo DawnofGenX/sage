@@ -1,0 +1,30 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+node_modules/
+.env
+.env~*
+.env.*.bak
+.env.*.orig
+.env.*.swp
+!.env.example
+!.env.*.example
+*.db
+.DS_Store
+
+# Python environments and caches
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editor
+.vscode/
+.idea/
+*.swp

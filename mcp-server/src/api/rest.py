@@ -1,0 +1,86 @@
+"""REST API wrapper for Sage MCP server tools."""
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Any
+
+from tools.extraction import extract_from_call, get_contact_context, get_pipeline_health
+from tools.crud import (
+    create_contact,
+    update_contact,
+    create_deal,
+    update_deal_stage,
+    schedule_followup,
+    draft_followup_email,
+    log_call,
+)
+from tools.intelligence import (
+    get_deal_insights,
+    get_daily_briefing,
+    get_todays_followups,
+    get_weekly_review,
+    search_contacts,
+)
+from tools.sync import sync_to_crm
+from tools.expansion import (
+    get_company_context,
+    get_activities,
+    get_deal_history,
+    create_task,
+    enrich_contact,
+    get_forecast,
+)
+
+app = FastAPI(title="Sage API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+TOOLS = {
+    "extract_from_call": extract_from_call,
+    "get_contact_context": get_contact_context,
+    "get_pipeline_health": get_pipeline_health,
+    "create_contact": create_contact,
+    "update_contact": update_contact,
+    "create_deal": create_deal,
+    "update_deal_stage": update_deal_stage,
+    "schedule_followup": schedule_followup,
+    "draft_followup_email": draft_followup_email,
+    "log_call": log_call,
+    "get_deal_insights": get_deal_insights,
+    "get_daily_briefing": get_daily_briefing,
+    "get_todays_followups": get_todays_followups,
+    "get_weekly_review": get_weekly_review,
+    "search_contacts": search_contacts,
+    "sync_to_crm": sync_to_crm,
+    "get_company_context": get_company_context,
+    "get_activities": get_activities,
+    "get_deal_history": get_deal_history,
+    "create_task": create_task,
+    "enrich_contact": enrich_contact,
+    "get_forecast": get_forecast,
+}
+
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "server": "sage", "version": "1.0.0"}
+
+
+@app.post("/api/tools/{tool_name}")
+async def call_tool(tool_name: str, request: dict[str, Any]):
+    if tool_name not in TOOLS:
+        raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found")
+
+    tool_fn = TOOLS[tool_name]
+    try:
+        result = await tool_fn(**request)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

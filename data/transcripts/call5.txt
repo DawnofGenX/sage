@@ -1,0 +1,37 @@
+Call Transcript — Jennifer Williams, Initech
+Date: 2026-10-03
+Duration: 11:28
+
+[Start of call]
+
+Rep: Jennifer, thanks for jumping on the call. I know you're just starting your evaluation, so I'll keep this high-level and we can dive deeper whenever you're ready.
+
+Jennifer: Sounds good. We're in the early stages — I'm building a shortlist of vendors to present to my team. What makes your platform different from the others?
+
+Rep: Fair question. Three things come to mind. First, our real-time collaboration features are built into the core platform — not bolted on. Second, our API is fully documented with SDKs in Python, Go, and TypeScript. Third, we offer a 30-day free trial with full feature access, so your team can evaluate without a credit card.
+
+Jennifer: The trial is appealing. My engineers are skeptical of anything that requires a sales call before you can test it.
+
+Rep: I completely understand. You can sign up right now and have a workspace running in about five minutes. No sales involvement needed until you're ready.
+
+Jennifer: Okay, I'll give it a spin this week. What about team features? We're a 15-person product team and we need good permission controls.
+
+Rep: We support role-based access control with custom roles. You can set permissions at the workspace, project, and even individual resource level. We also have guest access for external collaborators.
+
+Jennifer: That's more granular than what I've seen elsewhere. What about integrations? We use Jira, Slack, and GitHub.
+
+Rep: Native integrations with all three. The Jira integration supports bidirectional sync, Slack notifications are configurable per-channel, and GitHub integration includes PR-based triggers.
+
+Jennifer: Nice. What's the pricing for a team our size?
+
+Rep: For 15 seats on our team plan, it's $25,000 annually. That includes all the integrations, RBAC, and standard support.
+
+Jennifer: That's reasonable. Let me trial it with my team and we'll compare notes with the other vendors on our shortlist.
+
+Rep: Sounds like a plan. I'll send you a quick-start guide and a link to our documentation. Feel free to reach out if you have questions during the trial.
+
+Jennifer: Will do. Thanks for the overview.
+
+Rep: Anytime, Jennifer. Good luck with the evaluation.
+
+[End of call]

@@ -1,0 +1,12 @@
+[
+  {"name": "Sarah Chen", "company": "Acme Corp", "email": "sarah@acme.com", "phone": "+1-555-0100", "title": "VP of Engineering"},
+  {"name": "Mike Johnson", "company": "Globex", "email": "mike@globex.com", "phone": "+1-555-0101", "title": "CTO"},
+  {"name": "Jennifer Williams", "company": "Initech", "email": "jennifer@initech.com", "phone": "+1-555-0102", "title": "Head of Product"},
+  {"name": "David Stark", "company": "Stark Industries", "email": "david@stark.com", "phone": "+1-555-0103", "title": "CEO"},
+  {"name": "Lisa Wayne", "company": "Wayne Enterprises", "email": "lisa@wayne.com", "phone": "+1-555-0104", "title": "CFO"},
+  {"name": "Tom Oscorp", "company": "Oscorp", "email": "tom@oscorp.com", "phone": "+1-555-0105", "title": "VP of Sales"},
+  {"name": "Amy Hooli", "company": "Hooli", "email": "amy@hooli.com", "phone": "+1-555-0106", "title": "Engineering Director"},
+  {"name": "James Cyberdyne", "company": "Cyberdyne Systems", "email": "james@cyberdyne.com", "phone": "+1-555-0107", "title": "COO"},
+  {"name": "Nina Tyrell", "company": "Tyrell Corporation", "email": "nina@tyrell.com", "phone": "+1-555-0108", "title": "VP of Operations"},
+  {"name": "Alex Weyland", "company": "Weyland-Yutani", "email": "alex@weyland.com", "phone": "+1-555-0109", "title": "CTO"}
+]
