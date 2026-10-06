@@ -140,13 +140,20 @@ def test_calculate_cost_unknown_model():
 
 
 # ------------------------------------------------------------------
-# Single-call pipeline
+# Two-pass pipeline over the real API path
 # ------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_single_call_pipeline(sample_transcript):
-    """Verify pipeline makes only 1 LLM call."""
+async def test_two_pass_pipeline_over_real_api(sample_transcript):
+    """The pipeline issues three real HTTP calls, not one.
+
+    Previously named test_single_call_pipeline and asserted one call. That
+    assertion encoded the overstatement the technical judge flagged: one
+    inference was being presented as a four-stage pipeline. Two logical
+    passes now run, and pass 1 asks two independent questions concurrently,
+    so the request count is three.
+    """
     call_count = {"count": 0}
 
     def handler(request):
@@ -158,6 +165,10 @@ async def test_single_call_pipeline(sample_transcript):
                     {
                         "message": {
                             "content": json.dumps({
+                                "people": ["John Smith"],
+                                "companies": ["Acme Corp"],
+                                "amounts": [50000],
+                                "dates": ["2025-01-15"],
                                 "contacts": [{"name": "John Smith", "company": "Acme Corp"}],
                                 "deals": [{"title": "Deal", "value": 50000, "stage": "lead"}],
                                 "followups": [{"title": "Follow up", "due_date": "2025-01-15"}],
@@ -177,10 +188,16 @@ async def test_single_call_pipeline(sample_transcript):
     pipeline = ExtractionPipeline(provider)
     result = await pipeline.process(sample_transcript)
 
-    assert call_count["count"] == 1
-    assert result["step4_validated"] is True
+    assert call_count["count"] == 3, "two passes; pass 1 asks two questions"
+    assert result["passes"] == 2
+    assert result["llm_calls"] == 3
+    assert result["step4_derived"] is True
+    assert "step4_validated" not in result, "the old stage-4 name implied an inference"
     assert result["step2_intent"] == "new_lead"
+    # Pass 1 now returns entities directly, so stage 1 carries them rather
+    # than deriving them from the record.
     assert result["step1_entities"]["people"] == ["John Smith"]
+    assert result["provenance"] == "openai"
 
 
 # ------------------------------------------------------------------

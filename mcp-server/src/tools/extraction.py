@@ -35,7 +35,12 @@ def _get_s3() -> S3Storage:
 
 
 async def extract_from_call(transcript: str, audio_url: str | None = None) -> dict:
-    """Process a call transcript through the full 4-step extraction pipeline.
+    """Process a call transcript through the two-pass extraction pipeline.
+
+    Two real LLM passes run (entities + intent concurrently, then the
+    structured record grounded in those findings), followed by a local schema
+    check reported as stage 4. See extraction/pipeline.py for why stage 4 is
+    named `step4_derived`.
 
     Args:
         transcript: The sales call transcript text.
@@ -44,8 +49,9 @@ async def extract_from_call(transcript: str, audio_url: str | None = None) -> di
             processing (e.g., duration estimation).
 
     Returns:
-        A dictionary with all four extraction steps:
-        step1_entities, step2_intent, step3_record, step4_validated.
+        A dictionary with the four stages plus the pass accounting:
+        step1_entities, step2_intent, step3_record, step4_derived,
+        passes (2), llm_calls (3), inferred_stages, derived_stages, provenance.
     """
     pipeline = _get_pipeline()
 

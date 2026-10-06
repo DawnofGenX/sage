@@ -50,23 +50,30 @@ def negative_transcript():
 
 @pytest.mark.asyncio
 async def test_process_returns_all_steps(pipeline, sample_transcript):
-    """Verify all 4 steps are in the result."""
+    """Verify all 4 stages are in the result, plus the pass accounting."""
     result = await pipeline.process(sample_transcript)
 
     assert "step1_entities" in result
     assert "step2_intent" in result
     assert "step3_record" in result
-    assert "step4_validated" in result
+    assert "step4_derived" in result
+    # Two logical passes; three requests, because pass 1 asks two questions.
+    assert result["passes"] == 2
+    assert result["llm_calls"] == 3
 
 
 # ------------------------------------------------------------------
-# Step 1: Entity extraction
+# Step 1: Entity extraction (a real pass-1 LLM call)
 # ------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_step1_entities_extracted(pipeline, sample_transcript):
-    """Verify entities are extracted."""
+    """Verify entities come from pass 1.
+
+    These used to be derived from the stage-3 record, which is why stage 1
+    could never disagree with stage 3. Now pass 1 asks for entities directly.
+    """
     result = await pipeline.process(sample_transcript)
 
     entities = result["step1_entities"]
@@ -85,13 +92,14 @@ async def test_step1_entities_extracted(pipeline, sample_transcript):
     assert any("Acme" in c for c in entities["companies"])
     assert any("Globex" in c for c in entities["companies"])
 
-    # Should find amounts (derived from deal values)
+    # Amounts and dates now come from pass 1's own extraction. The mock
+    # renders the amount as the model saw it in the text ("$50,000") rather
+    # than as a coerced numeric, which is the honest pass-1 shape.
     assert len(entities["amounts"]) > 0
-    assert "50000" in entities["amounts"]
+    assert any("50,000" in str(a) or "50000" in str(a) for a in entities["amounts"])
 
-    # Should find dates
     assert len(entities["dates"]) > 0
-    assert any("January" in d for d in entities["dates"])
+    assert any("January" in str(d) for d in entities["dates"])
 
 
 # ------------------------------------------------------------------
@@ -142,16 +150,22 @@ async def test_step3_record_generated(pipeline, sample_transcript):
 
 
 # ------------------------------------------------------------------
-# Step 4: Validation
+# Step 4: Validation (local, not an inference)
 # ------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_step4_validated(pipeline, sample_transcript):
-    """Verify validation flag is True."""
+async def test_step4_derived(pipeline, sample_transcript):
+    """Verify the validation flag, under its honest name.
+
+    Renamed from step4_validated: stage 4 is a local schema check, and
+    "validated" read as though a fourth model call had judged the output.
+    """
     result = await pipeline.process(sample_transcript)
 
-    assert result["step4_validated"] is True
+    assert result["step4_derived"] is True
+    assert result["derived_stages"] == [4]
+    assert result["inferred_stages"] == [1, 2, 3]
 
 
 # ------------------------------------------------------------------
@@ -164,11 +178,11 @@ async def test_empty_transcript(pipeline):
     """Verify graceful handling of empty transcript."""
     result = await pipeline.process("")
 
-    # All steps should still be present
+    # All stages should still be present
     assert "step1_entities" in result
     assert "step2_intent" in result
     assert "step3_record" in result
-    assert "step4_validated" in result
+    assert "step4_derived" in result
 
     # Entities should be empty lists
     entities = result["step1_entities"]
@@ -192,4 +206,4 @@ async def test_empty_transcript(pipeline):
     assert record["sentiment"]["sentiment"] == "neutral"
 
     # Validation should still pass (all required fields present)
-    assert result["step4_validated"] is True
+    assert result["step4_derived"] is True

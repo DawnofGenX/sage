@@ -67,7 +67,7 @@ def test_extract_from_call(client):
     assert "step1_entities" in data
     assert "step2_intent" in data
     assert "step3_record" in data
-    assert "step4_validated" in data
+    assert "step4_derived" in data
 
 
 def test_get_contact_context(client):

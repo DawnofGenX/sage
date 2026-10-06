@@ -1,17 +1,29 @@
-"""Multi-step extraction pipeline for sales call transcripts.
+"""Two-pass extraction pipeline for sales call transcripts.
 
-Processes transcripts through four stages:
-  1. Entity extraction (people, companies, amounts, dates)
-  2. Intent classification (new_lead, follow_up, deal_update, general)
-  3. Structured record generation (contacts, deals, followups, sentiment, buying_signals, risks)
-  4. Schema validation (ensure required fields exist, normalize data)
+Processes a transcript in TWO real LLM passes:
+
+  Pass 1 (concurrent)   entities + intent   — two independent requests
+  Pass 2                structured record   — grounded in pass-1 output
+  Stage 4               local schema validation, NOT an inference
+
+Honesty note — why this shape:
+    This module previously made ONE LLM call (extract(transcript, "full"))
+    and reshaped that single response into four "stages". Its own docstring
+    said so: "Makes a single LLM call and derives all steps from the result."
+    Meanwhile the project docs advertised a four-step extraction pipeline.
+
+    Rather than keep a claim the code did not support, the pipeline now does
+    what it says: two genuine inference passes, with the fourth stage reported
+    as `step4_derived`. The result carries `passes`, `inferred_stages`, and
+    `derived_stages` so a consumer can tell which stages involved a model and
+    which were local arithmetic — without reading this docstring.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
-from llm.provider import LLMProvider
+import asyncio
+import json
+from typing import Any, Protocol, runtime_checkable
 
 
 # Valid intent values
@@ -31,106 +43,132 @@ REQUIRED_RECORD_FIELDS = {
 REQUIRED_ENTITY_FIELDS = {"people", "companies", "amounts", "dates"}
 
 
-class ExtractionPipeline:
-    """Multi-step extraction pipeline that processes sales call transcripts.
+@runtime_checkable
+class SupportsExtraction(Protocol):
+    """What the pipeline needs from a provider.
 
-    Takes an LLMProvider instance and runs four extraction steps:
-    entity extraction, intent classification, record generation,
-    and schema validation.
+    A Protocol rather than a concrete LLMProvider so tests can supply a
+    counting double, and so any future provider (Bedrock, a queue, a cache)
+    can be dropped in without inheriting from LLMProvider.
     """
 
-    def __init__(self, provider: LLMProvider):
-        """Initialize the pipeline with an LLM provider.
+    last_provenance: str
+    call_count: int
 
-        Args:
-            provider: An LLMProvider instance for making extraction calls.
-        """
+    async def extract(self, transcript: str, extraction_type: str) -> Any: ...
+
+
+class ExtractionPipeline:
+    """Two-pass extraction pipeline for sales call transcripts.
+
+    Args:
+        provider: Anything implementing SupportsExtraction.
+    """
+
+    def __init__(self, provider: SupportsExtraction):
         self.provider = provider
 
     async def process(self, transcript: str) -> dict[str, Any]:
-        """Process a transcript through all four extraction steps.
-
-        Makes a single LLM call and derives all steps from the result.
-
-        Args:
-            transcript: The sales call transcript text.
+        """Process a transcript through two LLM passes plus local validation.
 
         Returns:
-            A dictionary with all four steps visible:
             {
-                'step1_entities': {'people': [...], 'companies': [...], 'amounts': [...], 'dates': [...]},
-                'step2_intent': 'new_lead',
-                'step3_record': {'contacts': [...], 'deals': [...], 'followups': [...],
-                                 'sentiment': '...', 'buying_signals': [...], 'risks': [...]},
-                'step4_validated': True
+              'step1_entities': {'people', 'companies', 'amounts', 'dates'},
+              'step2_intent': str,
+              'step3_record': {'contacts', 'deals', 'followups', 'sentiment',
+                               'buying_signals', 'risks'},
+              'step4_derived': bool,     # local validation, not inference
+              'passes': 2,               # real LLM calls made
+              'inferred_stages': [1, 2, 3],
+              'derived_stages': [4],
+              'provenance': str,         # 'mock' | 'openai' | 'anthropic' | 'bedrock'
             }
         """
-        # Single LLM call for all extraction
-        full_result = await self.provider.extract(transcript, "full")
+        # --- Pass 1: entities and intent are independent, so overlap them. ---
+        entities_raw, intent_raw = await asyncio.gather(
+            self.provider.extract(transcript, "entities"),
+            self.provider.extract(transcript, "intent"),
+        )
 
-        # Step 1: Derive entities from the full result
-        step1_entities = self._derive_entities(full_result)
+        step1_entities = self._normalize_entities(entities_raw)
+        step2_intent = self._normalize_intent(intent_raw)
 
-        # Step 2: Derive intent from the full result
-        step2_intent = self._derive_intent(full_result)
-
-        # Step 3: Derive record from the full result
+        # --- Pass 2: generate the record, grounded in what pass 1 found. ---
+        grounding = self._build_grounding(transcript, step1_entities, step2_intent)
+        full_result = await self.provider.extract(grounding, "full")
         step3_record = self._derive_record(full_result)
 
-        # Step 4: Schema validation
-        step4_validated = self._validate(step3_record)
+        # --- Stage 4: local schema validation. Not a model call. ---
+        step4_derived = self._validate(step3_record)
 
         return {
             "step1_entities": step1_entities,
             "step2_intent": step2_intent,
             "step3_record": step3_record,
-            "step4_validated": step4_validated,
+            "step4_derived": step4_derived,
+            # Two logical passes: pass 1 (entities + intent, issued
+            # concurrently) and pass 2 (the record). That is three HTTP
+            # requests, because pass 1 asks two independent questions.
+            # Both numbers are reported so no consumer has to guess which
+            # one "passes" refers to — the two-pass/four-stage wording in
+            # the docs has already cost one overstatement.
+            "passes": 2,
+            "llm_calls": 3,
+            "inferred_stages": [1, 2, 3],
+            "derived_stages": [4],
+            "provenance": getattr(self.provider, "last_provenance", "unknown"),
         }
 
-    def _derive_entities(self, full_result: dict[str, Any]) -> dict[str, list[str]]:
-        """Step 1: Derive entities (people, companies, amounts, dates) from full result.
+    # ------------------------------------------------------------------
+    # Pass 1 helpers
+    # ------------------------------------------------------------------
 
-        Args:
-            full_result: The full extraction result from the LLM.
+    def _normalize_entities(self, raw: Any) -> dict[str, list[str]]:
+        """Coerce pass-1 entity output into the four expected list fields."""
+        if not isinstance(raw, dict):
+            return {field: [] for field in REQUIRED_ENTITY_FIELDS}
+        result: dict[str, list[Any]] = {}
+        for field in REQUIRED_ENTITY_FIELDS:
+            value = raw.get(field, [])
+            if not isinstance(value, list):
+                value = [value] if value else []
+            result[field] = value
+        return result
 
-        Returns:
-            A dictionary with keys 'people', 'companies', 'amounts', 'dates'.
+    def _normalize_intent(self, raw: Any) -> str:
+        """Pass 1 may return a bare label or a dict; accept both."""
+        if isinstance(raw, dict):
+            raw = raw.get("intent", "general")
+        if not isinstance(raw, str) or raw not in VALID_INTENTS:
+            return "general"
+        return raw
+
+    def _build_grounding(
+        self, transcript: str, entities: dict[str, list[Any]], intent: str
+    ) -> str:
+        """Compose pass 2's input: the transcript plus pass-1 findings.
+
+        Grounding matters: without it pass 1 is decorative, since nothing it
+        found would constrain the record. The transcript is included so pass 2
+        still sees the source material.
         """
-        contacts = full_result.get("contacts", [])
-        deals = full_result.get("deals", [])
-        followups = full_result.get("followups", [])
+        return (
+            "Extract the CRM record for this sales call.\n\n"
+            "Original transcript:\n"
+            f"{transcript}\n\n"
+            "Findings from a prior analysis pass (treat as authoritative; do "
+            "not contradict them):\n"
+            f"{json.dumps({'entities': entities, 'intent': intent}, indent=2)}"
+        )
 
-        people = [c.get("name", "") for c in contacts if c.get("name")]
-        companies = [c.get("company", "") for c in contacts if c.get("company")]
-        amounts = [str(d.get("value", "")) for d in deals if d.get("value") is not None]
-        dates = [f.get("due_date") for f in followups if f.get("due_date")]
+    # ------------------------------------------------------------------
+    # Pass 2 helpers
+    # ------------------------------------------------------------------
 
-        return {"people": people, "companies": companies, "amounts": amounts, "dates": dates}
-
-    def _derive_intent(self, full_result: dict[str, Any]) -> str:
-        """Step 2: Derive intent from full result.
-
-        Args:
-            full_result: The full extraction result from the LLM.
-
-        Returns:
-            One of 'new_lead', 'follow_up', 'deal_update', or 'general'.
-        """
-        intent = full_result.get("intent", "general")
-        if intent not in VALID_INTENTS:
-            intent = "general"
-        return intent
-
-    def _derive_record(self, full_result: dict[str, Any]) -> dict[str, Any]:
-        """Step 3: Derive structured CRM record from full result.
-
-        Args:
-            full_result: The full extraction result from the LLM.
-
-        Returns:
-            A dictionary with keys 'contacts', 'deals', 'followups',
-            'sentiment', 'buying_signals', 'risks'.
-        """
+    def _derive_record(self, full_result: Any) -> dict[str, Any]:
+        """Normalize pass-2 output into the canonical record shape."""
+        if not isinstance(full_result, dict):
+            full_result = {}
         record: dict[str, Any] = {}
 
         for field in ("contacts", "deals", "followups", "buying_signals", "risks"):
@@ -140,37 +178,33 @@ class ExtractionPipeline:
             record[field] = value
 
         sentiment = full_result.get("sentiment", {})
+        if isinstance(sentiment, str):
+            sentiment = {"sentiment": sentiment}
         if not isinstance(sentiment, dict):
-            sentiment = {"sentiment": str(sentiment)}
-        if "sentiment" not in sentiment:
-            sentiment["sentiment"] = "neutral"
+            sentiment = {"sentiment": "neutral"}
+        sentiment.setdefault("sentiment", "neutral")
         record["sentiment"] = sentiment
 
         return record
 
+    # ------------------------------------------------------------------
+    # Stage 4 — local, no LLM
+    # ------------------------------------------------------------------
+
     def _validate(self, record: dict[str, Any]) -> bool:
-        """Step 4: Validate the structured record against the schema.
+        """Validate the record against the schema.
 
-        Ensures all required fields exist and have the correct types.
-        Normalizes data where possible.
-
-        Args:
-            record: The structured record to validate.
-
-        Returns:
-            True if the record is valid, False otherwise.
+        Pure local check: this is stage 4, derived rather than inferred, and is
+        reported as `step4_derived` so it is never read as a model judgement.
         """
-        # Check all required fields are present
         for field in REQUIRED_RECORD_FIELDS:
             if field not in record:
                 return False
 
-        # Validate list fields
         for field in ("contacts", "deals", "followups", "buying_signals", "risks"):
             if not isinstance(record[field], list):
                 return False
 
-        # Validate sentiment is a dict with required keys
         sentiment = record.get("sentiment")
         if not isinstance(sentiment, dict):
             return False

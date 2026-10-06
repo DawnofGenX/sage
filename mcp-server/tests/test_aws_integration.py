@@ -383,7 +383,7 @@ async def test_extract_from_call_with_audio_url(monkeypatch):
             audio_url=audio_url,
         )
         assert "step1_entities" in result
-        assert "step4_validated" in result
+        assert "step4_derived" in result
 
 
 @pytest.mark.asyncio
@@ -395,7 +395,7 @@ async def test_extract_from_call_without_audio_url(monkeypatch):
 
     result = await extract_from_call(transcript="Test transcript")
     assert "step1_entities" in result
-    assert "step4_validated" in result
+    assert "step4_derived" in result
 
 
 @pytest.mark.asyncio

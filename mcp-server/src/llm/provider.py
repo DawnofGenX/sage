@@ -22,7 +22,13 @@ from typing import Any
 import httpx
 
 from llm.formats import LLMAPIFormat, detect_format, parse_json_response
-from llm.prompts import EMAIL_PROMPT, EXTRACTION_PROMPT, INSIGHTS_PROMPT
+from llm.prompts import (
+    EMAIL_PROMPT,
+    ENTITIES_PROMPT,
+    EXTRACTION_PROMPT,
+    INSIGHTS_PROMPT,
+    INTENT_PROMPT,
+)
 
 DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -240,6 +246,10 @@ class LLMProvider:
         """Build the LLM prompt for a given extraction type."""
         if extraction_type == "insights":
             return INSIGHTS_PROMPT.replace("{context}", transcript)
+        if extraction_type == "entities":
+            return ENTITIES_PROMPT.replace("{transcript}", transcript)
+        if extraction_type == "intent":
+            return INTENT_PROMPT.replace("{transcript}", transcript)
         if extraction_type == "email":
             # The caller passes a JSON blob of {contact, context, tone} in the
             # transcript slot, since this prompt is not transcript-shaped.

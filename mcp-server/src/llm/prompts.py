@@ -31,6 +31,44 @@ Return a JSON object with:
 }
 """
 
+# Added 2026-06 for the two-pass pipeline.
+#
+# Before this, "entities" and "intent" both fell through to EXTRACTION_PROMPT,
+# so pass 1 asked the model for a full CRM record twice — while the caller
+# expected a small entity list and a bare intent label respectively. The two
+# prompts below are the shapes the pipeline actually consumes.
+ENTITIES_PROMPT = """You are a sales call analysis AI. From the following call transcript, extract ONLY the entities. Do not build a CRM record.
+
+Return a JSON object with exactly these keys:
+{{
+  "people": ["full names of people mentioned"],
+  "companies": ["company names mentioned"],
+  "amounts": ["monetary amounts, as written in the transcript"],
+  "dates": ["dates and deadlines mentioned, as written"]
+}}
+
+Transcript:
+{transcript}
+"""
+
+INTENT_PROMPT = """You are a sales call analysis AI. Classify the intent of the following call transcript.
+
+Choose exactly one of:
+  new_lead     — a new prospect is being qualified for the first time
+  follow_up    — an existing contact is being followed up on
+  deal_update  — an existing deal's status is changing
+  general      — none of the above
+
+Return a JSON object with exactly these keys:
+{{
+  "intent": "one of new_lead | follow_up | deal_update | general",
+  "confidence": 0.0
+}}
+
+Transcript:
+{transcript}
+"""
+
 # Added 2026-06. draft_followup_email previously reused EXTRACTION_PROMPT with
 # extraction_type="full", which asks the model to pull CRM records out of a
 # call transcript — the wrong task entirely — and then discarded the response.

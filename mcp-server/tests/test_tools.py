@@ -64,7 +64,7 @@ async def test_extract_from_call(sample_transcript):
     assert "step1_entities" in result
     assert "step2_intent" in result
     assert "step3_record" in result
-    assert "step4_validated" in result
+    assert "step4_derived" in result
 
     # Step 1 checks
     entities = result["step1_entities"]
@@ -87,7 +87,7 @@ async def test_extract_from_call(sample_transcript):
     assert "risks" in record
 
     # Step 4 checks
-    assert result["step4_validated"] is True
+    assert result["step4_derived"] is True
 
 
 @pytest.mark.asyncio
