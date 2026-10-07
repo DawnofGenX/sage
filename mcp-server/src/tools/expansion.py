@@ -1,7 +1,8 @@
 """Expansion tools for Sage MCP server — adds 6 new tools (17-22)."""
 from datetime import datetime, timedelta
 
-from tools.common import _get_db, _get_provider
+from llm.provider import LLMProvider
+from tools.common import _get_db
 from tools.schemas import (
     ActivitiesResponse,
     CompanyContext,
@@ -10,6 +11,15 @@ from tools.schemas import (
     EnrichmentResponse,
     ForecastResponse,
 )
+
+_provider = None
+
+
+def _get_provider() -> LLMProvider:
+    global _provider
+    if _provider is None:
+        _provider = LLMProvider()
+    return _provider
 
 
 async def get_company_context(company_name: str) -> CompanyContext:

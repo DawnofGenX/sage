@@ -1,7 +1,17 @@
 """CRUD tools for Sage MCP server."""
 
-from tools.common import _get_db, _get_provider
+from llm.provider import LLMProvider
+from tools.common import _get_db
 from tools.schemas import CreatedRecord, EmailDraft, UpdatedRecord
+
+_provider = None
+
+
+def _get_provider() -> LLMProvider:
+    global _provider
+    if _provider is None:
+        _provider = LLMProvider()
+    return _provider
 
 
 async def create_contact(

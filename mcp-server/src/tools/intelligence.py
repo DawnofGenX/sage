@@ -2,7 +2,8 @@
 
 from datetime import datetime, timedelta
 
-from tools.common import _get_db, _get_provider
+from llm.provider import LLMProvider
+from tools.common import _get_db
 from tools.schemas import (
     DailyBriefing,
     DealInsights,
@@ -10,6 +11,15 @@ from tools.schemas import (
     SearchResponse,
     WeeklyReview,
 )
+
+_provider = None
+
+
+def _get_provider() -> LLMProvider:
+    global _provider
+    if _provider is None:
+        _provider = LLMProvider()
+    return _provider
 
 
 async def get_deal_insights(deal_id: int) -> DealInsights:
