@@ -18,11 +18,12 @@ Environment Variables:
 
 import json
 import os
-import re
 from typing import Any
 
+from llm.mock_extraction import MockExtractionMixin
 
-class BedrockProvider:
+
+class BedrockProvider(MockExtractionMixin):
     """Amazon Bedrock provider for LLM-powered sales intelligence.
 
     Supports Nova and Claude model families. Falls back to mock mode
@@ -218,140 +219,3 @@ class BedrockProvider:
                 "buying_signals": [],
                 "risks": [],
             })
-
-    def _mock_extract(self, transcript: str, extraction_type: str) -> dict[str, Any]:
-        """Keyword-based mock extraction (same pattern as LLMProvider)."""
-        if extraction_type == "entities":
-            return self._mock_entities(transcript)
-        elif extraction_type == "intent":
-            return self._mock_intent(transcript)
-        elif extraction_type == "sentiment":
-            return self._mock_sentiment(transcript)
-        elif extraction_type == "insights":
-            return self._mock_insights(transcript)
-        else:
-            return self._mock_full(transcript)
-
-    def _mock_entities(self, transcript: str) -> dict[str, Any]:
-        """Extract entities using regex/keyword matching."""
-        people = re.findall(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b", transcript)
-        companies = re.findall(r"\b([A-Z][a-z]+ (?:Corp|Inc|Ltd|LLC|Company))\b", transcript)
-        amounts = re.findall(r"\$[\d,]+(?:\.\d{2})?", transcript)
-        dates = re.findall(r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?\b", transcript)
-
-        return {
-            "people": list(set(people)),
-            "companies": list(set(companies)),
-            "amounts": amounts,
-            "dates": dates,
-        }
-
-    def _mock_intent(self, transcript: str) -> dict[str, Any]:
-        """Classify intent using keyword matching."""
-        text = transcript.lower()
-        intents = {
-            "follow_up": ["follow up", "follow-up", "check back", "reconnect"],
-            "demo_request": ["demo", "walkthrough", "show me", "trial"],
-            "pricing_inquiry": ["price", "pricing", "cost", "budget", "quote"],
-            "support": ["issue", "problem", "help", "support", "broken"],
-            "closing": ["sign", "contract", "approve", "buy", "purchase"],
-        }
-
-        best_intent = "general"
-        best_score = 0
-        for intent, keywords in intents.items():
-            score = sum(1 for kw in keywords if kw in text)
-            if score > best_score:
-                best_score = score
-                best_intent = intent
-
-        confidence = min(0.5 + best_score * 0.15, 0.95)
-        return {"intent": best_intent, "confidence": round(confidence, 2)}
-
-    def _mock_sentiment(self, transcript: str) -> dict[str, Any]:
-        """Analyze sentiment using keyword counting."""
-        text = transcript.lower()
-        positive_keywords = ["excited", "interested", "ready", "great", "love", "happy", "excellent"]
-        negative_keywords = ["concerned", "worried", "problem", "issue", "delay", "cut", "expensive"]
-
-        pos_count = sum(1 for kw in positive_keywords if kw in text)
-        neg_count = sum(1 for kw in negative_keywords if kw in text)
-
-        if pos_count > neg_count:
-            sentiment = "positive"
-            confidence = min(0.5 + (pos_count - neg_count) * 0.15, 0.95)
-        elif neg_count > pos_count:
-            sentiment = "negative"
-            confidence = min(0.5 + (neg_count - pos_count) * 0.15, 0.95)
-        else:
-            sentiment = "neutral"
-            confidence = 0.6
-
-        return {"sentiment": sentiment, "confidence": round(confidence, 2)}
-
-    def _mock_full(self, transcript: str) -> dict[str, Any]:
-        """Combine all mock extractions into a full CRM record."""
-        entities = self._mock_entities(transcript)
-        intent = self._mock_intent(transcript)
-        sentiment = self._mock_sentiment(transcript)
-
-        contacts = [{"name": name} for name in entities["people"]]
-        deals = []
-        if entities["amounts"]:
-            deals.append({
-                "title": f"Potential deal with {entities['companies'][0] if entities['companies'] else 'prospect'}",
-                "value": entities["amounts"][0].replace("$", "").replace(",", ""),
-                "stage": "lead",
-            })
-
-        followups = []
-        if intent["intent"] == "follow_up":
-            followups.append({
-                "title": "Follow up with prospect",
-                "due_date": entities["dates"][0] if entities["dates"] else None,
-            })
-
-        buying_signals = []
-        signal_keywords = ["budget", "ready to buy", "decision", "approve", "sign", "contract", "timeline"]
-        for kw in signal_keywords:
-            if kw in transcript.lower():
-                buying_signals.append(kw)
-
-        risks = []
-        risk_keywords = ["competitor", "delay", "budget cut", "concern", "hesitation", "stall"]
-        for kw in risk_keywords:
-            if kw in transcript.lower():
-                risks.append(kw)
-
-        return {
-            "contacts": contacts,
-            "deals": deals,
-            "followups": followups,
-            "sentiment": sentiment,
-            "buying_signals": buying_signals,
-            "risks": risks,
-        }
-
-    def _mock_insights(self, transcript: str) -> dict[str, Any]:
-        """Generate proactive insights based on keywords."""
-        text = transcript.lower()
-        insights = []
-
-        if "budget" in text:
-            insights.append("Prospect mentioned budget — prioritize pricing discussion")
-        if "competitor" in text:
-            insights.append("Competitor mentioned — prepare competitive positioning")
-        if "timeline" in text or "urgent" in text:
-            insights.append("Time-sensitive opportunity — accelerate follow-up")
-        if "demo" in text or "trial" in text:
-            insights.append("Demo/trial interest — schedule product walkthrough")
-        if "decision" in text or "approve" in text:
-            insights.append("Decision-maker engaged — prepare proposal")
-        if "concern" in text or "worried" in text:
-            insights.append("Concerns raised — address objections proactively")
-
-        if not insights:
-            insights.append("General follow-up recommended to maintain engagement")
-
-        priority = "high" if len(insights) >= 3 else "medium" if len(insights) >= 2 else "low"
-        return {"insights": insights, "priority": priority}

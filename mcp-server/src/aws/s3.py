@@ -23,12 +23,13 @@ Environment Variables:
     S3_BUCKET_NAME: S3 bucket name (default: sage-recordings)
 """
 
-import json
 import os
 import tempfile
 
+from aws.base import BaseAWSAdapter
 
-class S3Storage:
+
+class S3Storage(BaseAWSAdapter):
     """S3-backed storage for call recordings with local file fallback.
 
     Stores audio recordings and transcript files in S3 when AWS credentials
@@ -43,39 +44,16 @@ class S3Storage:
         aws_secret_key: str | None = None,
         local_dir: str | None = None,
     ):
+        super().__init__(
+            region=region,
+            aws_access_key=aws_access_key,
+            aws_secret_key=aws_secret_key,
+        )
         self.bucket = bucket or os.environ.get("S3_BUCKET_NAME", "sage-recordings")
-        self.region = region or os.environ.get("AWS_REGION", "us-east-1")
-        self.aws_access_key = aws_access_key or os.environ.get("AWS_ACCESS_KEY_ID")
-        self.aws_secret_key = aws_secret_key or os.environ.get("AWS_SECRET_ACCESS_KEY")
-        self._use_fallback = not (self.aws_access_key and self.aws_secret_key)
-        self._client = None
 
         # Local fallback directory (always set for error fallback)
         self._local_dir = local_dir or os.path.join(tempfile.gettempdir(), "sage_s3_fallback")
         os.makedirs(self._local_dir, exist_ok=True)
-
-    @property
-    def is_fallback(self) -> bool:
-        """Return True if using local file fallback (no AWS credentials)."""
-        return self._use_fallback
-
-    def _get_client(self):
-        """Lazy-initialize the S3 client."""
-        if self._client is None:
-            try:
-                import boto3
-                self._client = boto3.client(
-                    "s3",
-                    region_name=self.region,
-                    aws_access_key_id=self.aws_access_key,
-                    aws_secret_access_key=self.aws_secret_key,
-                )
-            except ImportError:
-                raise RuntimeError(
-                    "boto3 is required for S3 integration. "
-                    "Install with: pip install boto3"
-                )
-        return self._client
 
     def _s3_key_to_local_path(self, key: str) -> str:
         """Convert an S3 key to a local file path."""
@@ -101,7 +79,7 @@ class S3Storage:
             return self._fallback_upload(key, data)
 
         try:
-            client = self._get_client()
+            client = self._get_client("s3")
             client.put_object(
                 Bucket=self.bucket,
                 Key=key,
@@ -126,7 +104,7 @@ class S3Storage:
             return self._fallback_get(key)
 
         try:
-            client = self._get_client()
+            client = self._get_client("s3")
             response = client.get_object(Bucket=self.bucket, Key=key)
             return response["Body"].read()
         except Exception:
@@ -145,7 +123,7 @@ class S3Storage:
             return self._fallback_list(prefix)
 
         try:
-            client = self._get_client()
+            client = self._get_client("s3")
             response = client.list_objects_v2(
                 Bucket=self.bucket,
                 Prefix=prefix,

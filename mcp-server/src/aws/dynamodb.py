@@ -37,8 +37,10 @@ import tempfile
 import uuid
 from datetime import datetime
 
+from aws.base import BaseAWSAdapter
 
-class DynamoDBStore:
+
+class DynamoDBStore(BaseAWSAdapter):
     """DynamoDB-backed storage for CRM data with SQLite fallback.
 
     Provides the same interface as the SQLite Database class but uses
@@ -53,41 +55,17 @@ class DynamoDBStore:
         aws_secret_key: str | None = None,
         db_path: str | None = None,
     ):
-        self.region = region or os.environ.get("AWS_REGION", "us-east-1")
+        super().__init__(
+            region=region,
+            aws_access_key=aws_access_key,
+            aws_secret_key=aws_secret_key,
+        )
         self.table_prefix = table_prefix or os.environ.get("DYNAMODB_TABLE_PREFIX", "sage")
-        self.aws_access_key = aws_access_key or os.environ.get("AWS_ACCESS_KEY_ID")
-        self.aws_secret_key = aws_secret_key or os.environ.get("AWS_SECRET_ACCESS_KEY")
-        self._use_fallback = not (self.aws_access_key and self.aws_secret_key)
-        self._client = None
-        self._resource = None
 
         # Fallback SQLite setup
         if self._use_fallback:
             self._db_path = db_path or os.path.join(tempfile.gettempdir(), "sage_dynamodb_fallback.db")
             self._init_fallback_db()
-
-    @property
-    def is_fallback(self) -> bool:
-        """Return True if using SQLite fallback (no AWS credentials)."""
-        return self._use_fallback
-
-    def _get_resource(self):
-        """Lazy-initialize the DynamoDB resource."""
-        if self._resource is None:
-            try:
-                import boto3
-                self._resource = boto3.resource(
-                    "dynamodb",
-                    region_name=self.region,
-                    aws_access_key_id=self.aws_access_key,
-                    aws_secret_access_key=self.aws_secret_access_key,
-                )
-            except ImportError:
-                raise RuntimeError(
-                    "boto3 is required for DynamoDB integration. "
-                    "Install with: pip install boto3"
-                )
-        return self._resource
 
     def _table_name(self, logical_name: str) -> str:
         """Get the full DynamoDB table name."""
@@ -111,7 +89,7 @@ class DynamoDBStore:
             return self._fallback_put(table, item)
 
         try:
-            dynamodb_table = self._get_resource().Table(self._table_name(table))
+            dynamodb_table = self._get_resource("dynamodb").Table(self._table_name(table))
             # Ensure item has a primary key
             if "id" not in item:
                 item["id"] = str(uuid.uuid4())
@@ -134,7 +112,7 @@ class DynamoDBStore:
             return self._fallback_get(table, key)
 
         try:
-            dynamodb_table = self._get_resource().Table(self._table_name(table))
+            dynamodb_table = self._get_resource("dynamodb").Table(self._table_name(table))
             response = dynamodb_table.get_item(Key=key)
             return response.get("Item", {})
         except Exception:
@@ -154,7 +132,7 @@ class DynamoDBStore:
             return self._fallback_query(table, filter_expr)
 
         try:
-            dynamodb_table = self._get_resource().Table(self._table_name(table))
+            dynamodb_table = self._get_resource("dynamodb").Table(self._table_name(table))
             # Simple scan with filter (DynamoDB query requires key conditions)
             response = dynamodb_table.scan()
             items = response.get("Items", [])
@@ -176,7 +154,7 @@ class DynamoDBStore:
             return self._fallback_scan(table)
 
         try:
-            dynamodb_table = self._get_resource().Table(self._table_name(table))
+            dynamodb_table = self._get_resource("dynamodb").Table(self._table_name(table))
             response = dynamodb_table.scan()
             return response.get("Items", [])
         except Exception:

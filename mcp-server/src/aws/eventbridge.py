@@ -32,8 +32,10 @@ import os
 import uuid
 from datetime import datetime
 
+from aws.base import BaseAWSAdapter
 
-class EventBridgeTriggers:
+
+class EventBridgeTriggers(BaseAWSAdapter):
     """EventBridge-backed trigger scheduling with in-process fallback.
 
     Schedules proactive insight generation using EventBridge rules
@@ -47,36 +49,13 @@ class EventBridgeTriggers:
         aws_access_key: str | None = None,
         aws_secret_key: str | None = None,
     ):
-        self.region = region or os.environ.get("AWS_REGION", "us-east-1")
+        super().__init__(
+            region=region,
+            aws_access_key=aws_access_key,
+            aws_secret_key=aws_secret_key,
+        )
         self.bus_name = bus_name or os.environ.get("EVENTBRIDGE_BUS", "default")
-        self.aws_access_key = aws_access_key or os.environ.get("AWS_ACCESS_KEY_ID")
-        self.aws_secret_key = aws_secret_key or os.environ.get("AWS_SECRET_ACCESS_KEY")
-        self._use_fallback = not (self.aws_access_key and self.aws_secret_key)
-        self._client = None
         self._fallback_rules: dict[str, dict] = {}
-
-    @property
-    def is_fallback(self) -> bool:
-        """Return True if using in-process fallback (no AWS credentials)."""
-        return self._use_fallback
-
-    def _get_client(self):
-        """Lazy-initialize the EventBridge client."""
-        if self._client is None:
-            try:
-                import boto3
-                self._client = boto3.client(
-                    "events",
-                    region_name=self.region,
-                    aws_access_key_id=self.aws_access_key,
-                    aws_secret_access_key=self.aws_secret_key,
-                )
-            except ImportError:
-                raise RuntimeError(
-                    "boto3 is required for EventBridge integration. "
-                    "Install with: pip install boto3"
-                )
-        return self._client
 
     # ------------------------------------------------------------------
     # Public API
@@ -97,7 +76,7 @@ class EventBridgeTriggers:
             return self._fallback_schedule(name, schedule, payload)
 
         try:
-            client = self._get_client()
+            client = self._get_client("events")
             response = client.put_rule(
                 Name=name,
                 ScheduleExpression=schedule,
@@ -132,7 +111,7 @@ class EventBridgeTriggers:
             return self._fallback_list()
 
         try:
-            client = self._get_client()
+            client = self._get_client("events")
             response = client.list_rules(
                 EventBusName=self.bus_name,
             )
@@ -162,7 +141,7 @@ class EventBridgeTriggers:
             return self._fallback_delete(name)
 
         try:
-            client = self._get_client()
+            client = self._get_client("events")
             # First remove targets
             try:
                 targets = client.list_targets_by_rule(
@@ -215,4 +194,3 @@ class EventBridgeTriggers:
             del self._fallback_rules[name]
             return True
         return False
-
