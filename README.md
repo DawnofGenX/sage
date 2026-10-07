@@ -18,7 +18,7 @@ Sage is a passive sales intelligence layer that sits on top of your existing CRM
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/sage.git
+git clone https://github.com/DawnofGenX/sage.git
 cd sage
 
 # Start with Docker
@@ -38,7 +38,7 @@ cd web-simulator && npm install && npm run dev
 
 ```bash
 cd mcp-server
-.venv/bin/python -m pytest tests/ -q     # expect: 163 passed
+.venv/bin/python -m pytest tests/ -q     # expect: 298 passed
 ```
 
 The `pip install -e .` step is not optional. The suite imports `from tools.crud
