@@ -58,7 +58,7 @@ export interface ExtractionResult {
     buying_signals: string[]
     risks: string[]
   }
-  step4_validated: boolean
+  step4_derived: boolean
 }
 
 export interface PipelineHealth {

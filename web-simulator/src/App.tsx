@@ -15,7 +15,7 @@ import ActivityFeed from './components/ActivityFeed'
 import AlexaView from './components/AlexaView'
 import DemoMode from './components/DemoMode'
 import Hero from './components/Hero'
-import { api } from './lib/api'
+import { api, runAgenticLoop, AgenticStep } from './lib/api'
 import type { Contact, Deal, Activity } from './lib/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ interface ExtractionResult {
     buying_signals: string[]
     risks: string[]
   }
-  step4_validated: boolean
+  step4_derived: boolean
 }
 
 type TabId = 'dashboard' | 'calls' | 'contacts' | 'deals' | 'forecast' | 'activity' | 'scenarios' | 'alexa'
@@ -132,114 +132,6 @@ const DEMO_SCENARIOS: Scenario[] = [
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
   },
 ]
-
-// ─── Mock Extraction Engine ─────────────────────────────────────────────────
-
-function mockExtract(transcript: string): ExtractionResult {
-  const lower = transcript.toLowerCase()
-
-  const people: string[] = []
-  const companies: string[] = []
-  const amounts: number[] = []
-  const dates: string[] = []
-
-  if (lower.includes('sarah') || lower.includes('chen')) people.push('Sarah Chen')
-  if (lower.includes('mike') || lower.includes('johnson')) people.push('Mike Johnson')
-  if (lower.includes('jennifer') || lower.includes('williams')) people.push('Jennifer Williams')
-  if (lower.includes('david') || lower.includes('stark')) people.push('David Stark')
-  if (lower.includes('lisa') || lower.includes('wayne')) people.push('Lisa Wayne')
-  if (lower.includes('john')) people.push('John (Sales Rep)')
-
-  if (lower.includes('acme')) companies.push('Acme Corp')
-  if (lower.includes('globex')) companies.push('Globex')
-  if (lower.includes('initech')) companies.push('Initech')
-  if (lower.includes('stark')) companies.push('Stark Industries')
-  if (lower.includes('wayne')) companies.push('Wayne Enterprises')
-
-  if (lower.includes('50000') || lower.includes('50,000') || lower.includes('50k')) amounts.push(50000)
-  if (lower.includes('120000') || lower.includes('120,000') || lower.includes('120k')) amounts.push(120000)
-  if (lower.includes('25000') || lower.includes('25,000') || lower.includes('25k')) amounts.push(25000)
-  if (lower.includes('200000') || lower.includes('200,000') || lower.includes('200k')) amounts.push(200000)
-  if (lower.includes('75000') || lower.includes('75,000') || lower.includes('75k')) amounts.push(75000)
-  if (lower.includes('15%') || lower.includes('15 percent')) amounts.push(15)
-
-  if (lower.includes('tuesday')) dates.push('Next Tuesday')
-  if (lower.includes('thursday')) dates.push('Thursday')
-  if (lower.includes('friday')) dates.push('Friday')
-  if (lower.includes('end of month')) dates.push('End of month')
-  if (lower.includes('next month')) dates.push('Next month')
-  if (lower.includes('6 weeks')) dates.push('6 weeks')
-
-  let intent = 'general'
-  if (lower.includes('follow up') || lower.includes('follow-up') || lower.includes('followup')) intent = 'follow_up'
-  else if (lower.includes('new') || lower.includes('referral') || lower.includes('referred')) intent = 'new_lead'
-  else if (lower.includes('deal') || lower.includes('contract') || lower.includes('pricing') || lower.includes('proposal')) intent = 'deal_update'
-
-  const contacts: Array<{ name: string; company?: string; email?: string }> = []
-  const deals: Array<{ title: string; value?: number; stage?: string }> = []
-  const followups: Array<{ title: string; due_date?: string }> = []
-  const buying_signals: string[] = []
-  const risks: string[] = []
-
-  if (people.length > 0) {
-    const primaryPerson = people[0]
-    const company = companies[0]
-    contacts.push({
-      name: primaryPerson,
-      company,
-      email: primaryPerson.toLowerCase().replace(' ', '.') + '@' + (company ? company.toLowerCase().replace(' ', '') : 'company') + '.com',
-    })
-  }
-
-  if (amounts.length > 0) {
-    const dealValue = amounts[0]
-    const stage = intent === 'new_lead' ? 'lead' : intent === 'deal_update' ? 'negotiation' : 'proposal'
-    deals.push({
-      title: companies[0] ? `${companies[0]} Deal` : 'New Deal',
-      value: dealValue,
-      stage,
-    })
-  }
-
-  if (lower.includes('follow up') || lower.includes('follow-up') || lower.includes('schedule') || lower.includes('demo')) {
-    followups.push({
-      title: lower.includes('demo') ? 'Schedule demo' : 'Follow up on conversation',
-      due_date: dates[0],
-    })
-  }
-
-  if (lower.includes('budget') || lower.includes('approved')) buying_signals.push('Budget approved')
-  if (lower.includes('excited') || lower.includes('interested') || lower.includes('love')) buying_signals.push('High interest')
-  if (lower.includes('ready') || lower.includes('congrats')) buying_signals.push('Ready to proceed')
-  if (lower.includes('referral') || lower.includes('referred')) buying_signals.push('Warm referral')
-
-  if (lower.includes('competitor') || lower.includes('evaluating')) risks.push('Evaluating competitors')
-  if (lower.includes('concern') || lower.includes('risk')) risks.push('Expressed concerns')
-  if (lower.includes('timeline') || lower.includes('deadline')) risks.push('Timeline pressure')
-
-  const sentiment = lower.includes('congrats') || lower.includes('excited') || lower.includes('perfect') || lower.includes('great')
-    ? 'positive'
-    : lower.includes('concern') || lower.includes('risk') || lower.includes('problem')
-    ? 'negative'
-    : 'neutral'
-
-  return {
-    step1_entities: { people, companies, amounts, dates },
-    step2_intent: intent,
-    step3_record: { contacts, deals, followups, sentiment, buying_signals, risks },
-    step4_validated: true,
-  }
-}
-
-function generateMockInsights(): Insight[] {
-  return [
-    { id: '1', text: 'Overdue follow-up: Schedule demo with Sarah Chen (due Next Tuesday)', urgency: 'overdue', timestamp: '2h ago' },
-    { id: '2', text: 'Stuck deal: Globex Platform Deal — no activity for 16 days', urgency: 'stuck', timestamp: '1d ago' },
-    { id: '3', text: 'Budget deadline approaching: Acme Enterprise License — budget approved, ready to close', urgency: 'info', timestamp: '3h ago' },
-    { id: '4', text: 'Overdue follow-up: Follow up on conversation with Mike Johnson', urgency: 'overdue', timestamp: '5h ago' },
-    { id: '5', text: 'Stuck deal: Initech Team Plan — stuck in lead stage for 21 days', urgency: 'stuck', timestamp: '2d ago' },
-  ]
-}
 
 // ─── Tab Configuration ──────────────────────────────────────────────────────
 
@@ -367,16 +259,10 @@ export default function App() {
             timestamp: ins.timestamp,
           })))
           setInsightsError(null)
-        } else if (!cancelled) {
-          // Fallback to mock insights if API returns empty
-          setInsights(generateMockInsights())
-          setInsightsError(null)
         }
       } catch (err) {
         if (!cancelled) {
           setInsightsError(err instanceof Error ? err.message : 'Failed to load daily briefing')
-          // Fallback to mock insights on error
-          setInsights(generateMockInsights())
         }
       } finally {
         if (!cancelled) setIsLoadingInsights(false)
@@ -424,57 +310,59 @@ export default function App() {
     setPipelineSteps(INITIAL_PIPELINE_STEPS)
     setTraceSteps(INITIAL_TRACE_STEPS)
 
-    const result = mockExtract(transcript)
+    const accumulatedSteps: AgenticStep[] = []
 
-    setCurrentStep(1)
-    updatePipelineStep(1, 'running')
-    updateTraceStep(1, 'running')
-    await delay(400)
-    updateTraceStep(1, 'complete', 120)
-    updateTraceStep(2, 'running')
-    await delay(500)
-    updatePipelineStep(1, 'complete', { entities: result.step1_entities })
-    updateTraceStep(2, 'complete', 340)
-    updateTraceStep(3, 'running')
+    runAgenticLoop(transcript, {
+      onStep: (step) => {
+        accumulatedSteps.push(step)
+        const pipelineStepId = Math.min(step.index + 1, 4)
+        const traceStepId = Math.min(step.index + 1, 7)
 
-    setCurrentStep(2)
-    updatePipelineStep(2, 'running')
-    await delay(400)
-    updatePipelineStep(2, 'complete', { intent: result.step2_intent })
-    updateTraceStep(3, 'complete', 280)
-    updateTraceStep(4, 'running')
-
-    setCurrentStep(3)
-    updatePipelineStep(3, 'running')
-    await delay(600)
-    updatePipelineStep(3, 'complete', { record: result.step3_record })
-    updateTraceStep(4, 'complete', 520)
-    updateTraceStep(5, 'running')
-
-    setCurrentStep(4)
-    updatePipelineStep(4, 'running')
-    await delay(300)
-    updatePipelineStep(4, 'complete', { validated: result.step4_validated })
-    updateTraceStep(5, 'complete', 180)
-    updateTraceStep(6, 'running')
-
-    await delay(200)
-    updateTraceStep(6, 'complete', 90)
-    updateTraceStep(7, 'running')
-
-    await delay(300)
-    updateTraceStep(7, 'complete', 210)
-
-    setExtractionResult(result)
-    setCurrentStep(0)
-    setIsProcessing(false)
+        updatePipelineStep(pipelineStepId, 'complete', {
+          tool: step.tool,
+          summary: step.summary,
+          duration_ms: step.duration_ms,
+          provenance: step.provenance,
+        })
+        updateTraceStep(traceStepId, 'complete', step.duration_ms)
+        setCurrentStep(pipelineStepId)
+      },
+      onComplete: (result) => {
+        const extractionResult: ExtractionResult = {
+          step1_entities: { people: [], companies: [], amounts: [], dates: [] },
+          step2_intent: 'general',
+          step3_record: { contacts: [], deals: [], followups: [], sentiment: 'neutral', buying_signals: [], risks: [] },
+          step4_derived: result.status === 'success',
+        }
+        setExtractionResult(extractionResult)
+        setCurrentStep(0)
+        setIsProcessing(false)
+      },
+      onError: (err) => {
+        setCurrentStep(0)
+        setIsProcessing(false)
+        setHealthError(err.message)
+      },
+    })
   }, [transcript, isProcessing, updatePipelineStep, updateTraceStep])
 
   const handleGenerateInsights = useCallback(async () => {
     setIsGeneratingInsights(true)
-    await delay(1200)
-    setInsights(generateMockInsights())
-    setIsGeneratingInsights(false)
+    try {
+      const briefing = await api.getDailyBriefing()
+      if (briefing && Array.isArray(briefing.insights) && briefing.insights.length > 0) {
+        setInsights(briefing.insights.map((ins: { text: string; urgency: string; timestamp?: string }, i: number) => ({
+          id: `briefing-${i}`,
+          text: ins.text,
+          urgency: (ins.urgency as 'overdue' | 'stuck' | 'info') || 'info',
+          timestamp: ins.timestamp,
+        })))
+      }
+    } catch (err) {
+      setInsightsError(err instanceof Error ? err.message : 'Failed to load insights')
+    } finally {
+      setIsGeneratingInsights(false)
+    }
   }, [])
 
   const handleSync = useCallback(async () => {

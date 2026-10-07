@@ -30,7 +30,7 @@ interface ExtractionPipelineProps {
       buying_signals: string[]
       risks: string[]
     }
-    step4_validated: boolean
+    step4_derived: boolean
   } | null
 }
 
@@ -204,16 +204,16 @@ function StepData({ step, extractionResult }: { step: PipelineStep; extractionRe
   if (step.id === 4) {
     return (
       <div className="mt-3">
-        <div className={`flex items-center gap-2 p-2 rounded ${extractionResult.step4_validated ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-          <svg className={`w-4 h-4 ${extractionResult.step4_validated ? 'text-green-400' : 'text-red-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {extractionResult.step4_validated ? (
+        <div className={`flex items-center gap-2 p-2 rounded ${extractionResult.step4_derived ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+          <svg className={`w-4 h-4 ${extractionResult.step4_derived ? 'text-green-400' : 'text-red-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {extractionResult.step4_derived ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             ) : (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             )}
           </svg>
-          <span className={`text-xs font-medium ${extractionResult.step4_validated ? 'text-green-400' : 'text-red-400'}`}>
-            {extractionResult.step4_validated ? 'Schema Valid' : 'Validation Failed'}
+          <span className={`text-xs font-medium ${extractionResult.step4_derived ? 'text-green-400' : 'text-red-400'}`}>
+            {extractionResult.step4_derived ? 'Derived — schema check' : 'Schema check failed'}
           </span>
         </div>
       </div>
