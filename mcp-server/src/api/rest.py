@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any
 
+from server import mcp
+
 from tools.extraction import extract_from_call, get_contact_context, get_pipeline_health
 from tools.crud import (
     create_contact,
@@ -32,7 +34,12 @@ from tools.expansion import (
     get_forecast,
 )
 
-app = FastAPI(title="Sage API", version="1.0.0")
+mcp_app = mcp.http_app()
+app = FastAPI(
+    title="Sage API",
+    version="1.0.0",
+    lifespan=mcp_app.lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -84,3 +91,6 @@ async def call_tool(tool_name: str, request: dict[str, Any]):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+app.mount("/", mcp_app)
