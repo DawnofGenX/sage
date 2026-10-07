@@ -78,10 +78,11 @@ def test_sync_success_path_is_schema_valid(client):
     SyncResult once declared `error` required, so every success — the normal
     case — was rejected by FastMCP's structuredContent validation.
     """
+    import uuid
     response = client.post(
         "/api/tools/sync_to_crm",
         json={"record": {"name": "Schema Valid"}, "target": "local",
-              "idempotency_key": "schema-probe-success"},
+              "idempotency_key": f"schema-probe-success-{uuid.uuid4().hex[:8]}"},
     )
     assert response.status_code == 200
     body = response.json()
