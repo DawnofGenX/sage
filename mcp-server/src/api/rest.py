@@ -80,6 +80,31 @@ async def health_check():
     return {"status": "ok", "server": "sage", "version": "1.0.0"}
 
 
+@app.get("/api/tools")
+async def list_tools():
+    """List every registered MCP tool with its schema.
+
+    Tool discovery is an MCP protocol operation (tools/list), not a Sage tool,
+    so it needs its own route. The web simulator calls this to show the tool
+    count before running the agentic chain; without it the client requested
+    /api/tools/list_tools, which 404s and put the demo into a permanent error
+    state. See docs/sse-contract-bugs.md.
+    """
+    tools = await mcp.list_tools()
+    return {
+        "count": len(tools),
+        "tools": [
+            {
+                "name": t.name,
+                "description": t.description or "",
+                "input_schema": getattr(t, "input_schema", None),
+                "output_schema": getattr(t, "output_schema", None),
+            }
+            for t in tools
+        ],
+    }
+
+
 @app.post("/api/tools/{tool_name}")
 async def call_tool(tool_name: str, request: dict[str, Any]):
     if tool_name not in TOOLS:

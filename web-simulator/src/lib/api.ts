@@ -24,7 +24,8 @@ export interface AgenticStep {
 
 export interface AgenticComplete {
   status: string
-  steps: AgenticStep[]
+  /** Number of steps that completed. NOT an array — the backend sends a count. */
+  steps: number
   synced_record_id?: string
   reason?: string
 }
@@ -76,6 +77,11 @@ export async function runAgenticLoop(
         handlers.onStep(parsed)
       } else if (eventType === 'complete') {
         handlers.onComplete(parsed)
+      } else if (eventType === 'error') {
+        // The backend emits this when the chain fails mid-run. It used to be
+        // dropped here — parsed, matched no branch, discarded — so the demo
+        // just stopped with no message. See docs/sse-contract-bugs.md.
+        handlers.onError(new Error(parsed.error ?? 'Agentic loop failed'))
       }
     } catch {
       // Ignore malformed JSON
@@ -169,5 +175,8 @@ export const api = {
     callTool('sync_to_crm', { record, target, idempotency_key: idempotencyKey }),
 
   listTools: () =>
-    callTool('list_tools', {}),
+    fetch(`${API_BASE}/tools`).then((r) => {
+      if (!r.ok) throw new Error(`API error: ${r.statusText}`)
+      return r.json()
+    }),
 }
