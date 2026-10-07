@@ -19,20 +19,20 @@ When Amazon launched Alexa+ with agentic capabilities, I saw an opportunity. Not
 Sage is a passive sales intelligence layer built as an MCP server (spec 2025-11-25, Streamable HTTP) that:
 
 - **Listens** to sales calls via Echo device (office) or phone app (field)
-- **Extracts** contacts, deals, follow-ups, sentiment, buying signals, and competitor mentions using Amazon Nova via AWS Bedrock (two LLM passes: entities + intent concurrent, then record generation grounded in pass-1 findings)
+- **Extracts** contacts, deals, follow-ups, sentiment, buying signals, and competitor mentions using a two-pass LLM pipeline (entities + intent concurrent, then record generation grounded in pass-1 findings). The LLM provider is pluggable — Amazon Nova via AWS Bedrock when credentials are present, deterministic fallback otherwise.
 - **Surfaces** proactive insights: "You haven't followed up with Acme in 20 days. Their Q4 budget deadline is Friday."
 - **Syncs** to Salesforce, HubSpot, Pipedrive, or a local SQLite-backed CRM via MCP — never fabricates success when credentials are missing
 - **Visualizes** pipeline health on Echo Show with deal boards, stuck-deal alerts, and sentiment trends
 
-The MCP server exposes 22 tools with typed output schemas, including `extract_from_call`, `get_pipeline_health`, `get_contact_context`, `draft_followup_email`, and `sync_to_crm`. A web simulator demonstrates the full experience for judges who don't have Alexa+ hardware.
+The MCP server exposes 23 tools with typed output schemas, including `extract_from_call`, `get_pipeline_health`, `get_contact_context`, `draft_followup_email`, and `sync_to_crm`. A web simulator demonstrates the full experience for judges who don't have Alexa+ hardware.
 
 ### How I Built It
 
 - **MCP Server**: Python, Streamable HTTP transport, spec 2025-11-25
 - **LLM**: Amazon Nova via AWS Bedrock for extraction and reasoning
-- **Data**: DynamoDB for CRM records, S3 for call recordings
-- **Proactive triggers**: EventBridge for scheduled insights
-- **Alexa+ integration**: Voice ID for speaker identification, Echo Show for visual rendering, proactive suggestions
+- **Data**: SQLite for CRM records (DynamoDB-ready schema)
+- **Proactive triggers**: Rule-based insight engine (EventBridge adapter stubbed)
+- **Alexa+ integration**: Echo Show simulation in web simulator, Alexa Skills Kit skill for voice interaction
 - **Web simulator**: React frontend with Web Speech API for voice input, Alexa+-style card rendering
 - **Open source**: MIT license, public repo
 
@@ -46,7 +46,7 @@ The MCP server exposes 22 tools with typed output schemas, including `extract_fr
 
 4. **No Alexa+ hardware access**: The MCP toolkit is gated preview. I built a web simulator that demonstrates the full MCP server + Alexa+ experience without requiring physical hardware — positioning it as a "client-agnostic MCP server" feature, not a workaround.
 
-5. **Scope discipline**: Matching Pact's 180 tools was impossible in 7 weeks. I focused on 16 high-impact tools that demonstrate the full agentic loop: listen → extract → reason → act → sync.
+5. **Scope discipline**: I focused on 23 high-impact tools that demonstrate the full agentic loop: listen → extract → reason → act → sync.
 
 ### What I Learned
 

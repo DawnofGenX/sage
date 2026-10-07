@@ -108,6 +108,84 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 
 ---
 
+## 9. MCP server not mounted on REST app
+
+| Field | Details |
+|-------|---------|
+| **Task** | Expose MCP protocol endpoint alongside REST API |
+| **Expected** | `POST /mcp` returns a valid MCP response |
+| **Actual** | `POST /mcp`, `POST /`, and `POST /mcp/` all returned 404. The REST app was created but the MCP app was never mounted. The project called itself an MCP server but exposed no MCP endpoint. |
+| **Severity** | High |
+| **Fix** | Commit 20a018c mounted `mcp.http_app()` on the FastAPI app. Verified with a real MCP client over Streamable HTTP. |
+| **Suggestion** | Always verify the protocol endpoint exists, not just the REST wrapper. |
+
+---
+
+## 10. SyncResult declared `error` required
+
+| Field | Details |
+|-------|---------|
+| **Task** | Successful CRM sync validates against output schema |
+| **Expected** | `status: "success"` with a real record ID |
+| **Actual** | FastMCP rejected every successful sync with "'error' is a required property" because `SyncResult` declared `error` as a required field. No schema test caught it because tests only inspected the published schema, not runtime validation. |
+| **Severity** | High |
+| **Fix** | Made `error` optional in `SyncResult`. Added `test_schema_runtime_validity.py` which calls every tool and verifies the response validates against its own schema. |
+| **Suggestion** | Schema tests must exercise runtime validation, not just inspect the published schema. |
+
+---
+
+## 11. GenericRecord empty-schema trap
+
+| Field | Details |
+|-------|---------|
+| **Task** | Typed output schemas for all tools |
+| **Expected** | Every tool publishes a meaningful JSON Schema |
+| **Actual** | `GenericRecord` published `{"type": "object", "properties": {}}` — a schema that accepts anything and constrains nothing. It was technically typed but semantically empty. |
+| **Severity** | Medium |
+| **Fix** | Replaced with specific Pydantic models per tool. All 23 tools now publish meaningful schemas. |
+| **Suggestion** | An empty schema is worse than no schema — it signals typed output while providing none. |
+
+---
+
+## 12. `list_tools` 404
+
+| Field | Details |
+|-------|---------|
+| **Task** | Web simulator discovers available tools |
+| **Expected** | `GET /api/tools/list_tools` returns tool list |
+| **Actual** | 404. Tool discovery is an MCP protocol operation (`tools/list`), not a Sage tool. The client requested a REST endpoint that didn't exist. |
+| **Severity** | Medium |
+| **Fix** | Added `GET /api/tools` route that calls `mcp.list_tools()` and returns the full list with schemas. |
+| **Suggestion** | Protocol operations and domain tools have different namespaces. Don't conflate them. |
+
+---
+
+## 13. SSE parser contract bugs
+
+| Field | Details |
+|-------|---------|
+| **Task** | Frontend parses SSE frames from the agentic loop stream |
+| **Expected** | All frames parsed correctly regardless of chunk boundaries |
+| **Actual** | Three bugs: (1) `error` events were parsed but silently discarded, (2) frames split across chunk boundaries were dropped, (3) the parser assumed newline-terminated frames but the backend didn't guarantee it. |
+| **Severity** | High |
+| **Fix** | Added `sse_reference_parser.py` as a testable reference implementation. Fixed all three bugs. Verified at chunk sizes 4096 → 7 bytes. |
+| **Suggestion** | SSE parsing must be tested at multiple chunk sizes, not just with clean input. |
+
+---
+
+## 14. Idempotency test not idempotent
+
+| Field | Details |
+|-------|---------|
+| **Task** | Test sync success path validates against schema |
+| **Expected** | Test passes on every run |
+| **Actual** | Test used a fixed idempotency key against a persistent DB. First run passed; every subsequent run returned `already_synced` instead of `success`. |
+| **Severity** | Low |
+| **Fix** | Used `uuid.uuid4().hex[:8]` to generate a unique key per run. |
+| **Suggestion** | Tests that write to persistent state must clean up after themselves or use unique keys. |
+
+---
+
 ## Summary
 
 | # | Issue | Severity | Status |
@@ -120,3 +198,9 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 | 6 | Database connection management | Low | Sufficient for demo |
 | 7 | Four-step extraction claim | High | Withdrawn — docs corrected |
 | 8 | `sync_to_crm` fabricated success | High | Fixed — returns `not_configured` |
+| 9 | MCP server not mounted on REST app | High | Fixed — mounted at `/mcp` |
+| 10 | SyncResult declared `error` required | High | Fixed — `error` now optional |
+| 11 | GenericRecord empty-schema trap | Medium | Fixed — specific models per tool |
+| 12 | `list_tools` 404 | Medium | Fixed — `GET /api/tools` added |
+| 13 | SSE parser contract bugs | High | Fixed — reference parser + tests |
+| 14 | Idempotency test not idempotent | Low | Fixed — unique key per run |
