@@ -1,28 +1,7 @@
 """CRUD tools for Sage MCP server."""
 
-import os
-
-from data.db import Database
-from llm.provider import LLMProvider
+from tools.common import _get_db, _get_provider
 from tools.schemas import CreatedRecord, EmailDraft, UpdatedRecord
-
-_db = None
-_provider = None
-
-
-def _get_db() -> Database:
-    global _db
-    if _db is None:
-        db_path = os.environ.get("SAGE_DB_PATH", "sage.db")
-        _db = Database(db_path=db_path)
-    return _db
-
-
-def _get_provider() -> LLMProvider:
-    global _provider
-    if _provider is None:
-        _provider = LLMProvider()
-    return _provider
 
 
 async def create_contact(

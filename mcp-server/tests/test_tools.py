@@ -17,14 +17,11 @@ from tools import extraction, crud, intelligence, sync, expansion
 
 def reset_modules():
     """Reset global state in all tool modules."""
+    import tools.common as _common
     extraction._db = None
     extraction._pipeline = None
-    crud._db = None
-    crud._provider = None
-    intelligence._db = None
-    intelligence._provider = None
-    expansion._db = None
-    expansion._provider = None
+    _common._db = None
+    _common._provider = None
 
 
 @pytest.fixture(autouse=True)

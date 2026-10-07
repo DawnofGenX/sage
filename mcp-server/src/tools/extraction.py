@@ -1,23 +1,12 @@
 """Extraction tools for Sage MCP server."""
-import os
-
 from aws.s3 import S3Storage
-from data.db import Database
 from extraction.pipeline import ExtractionPipeline
 from llm.provider import LLMProvider
+from tools.common import _get_db
 from tools.schemas import ContactContext, ExtractionResult, PipelineHealth
 
-_db = None
 _pipeline = None
 _s3 = None
-
-
-def _get_db() -> Database:
-    global _db
-    if _db is None:
-        db_path = os.environ.get("SAGE_DB_PATH", "sage.db")
-        _db = Database(db_path=db_path)
-    return _db
 
 
 def _get_pipeline() -> ExtractionPipeline:

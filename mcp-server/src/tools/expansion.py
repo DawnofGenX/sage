@@ -1,9 +1,7 @@
 """Expansion tools for Sage MCP server — adds 6 new tools (17-22)."""
-import os
 from datetime import datetime, timedelta
 
-from data.db import Database
-from llm.provider import LLMProvider
+from tools.common import _get_db, _get_provider
 from tools.schemas import (
     ActivitiesResponse,
     CompanyContext,
@@ -12,24 +10,6 @@ from tools.schemas import (
     EnrichmentResponse,
     ForecastResponse,
 )
-
-_db = None
-_provider = None
-
-
-def _get_db() -> Database:
-    global _db
-    if _db is None:
-        db_path = os.environ.get("SAGE_DB_PATH", "sage.db")
-        _db = Database(db_path=db_path)
-    return _db
-
-
-def _get_provider() -> LLMProvider:
-    global _provider
-    if _provider is None:
-        _provider = LLMProvider()
-    return _provider
 
 
 async def get_company_context(company_name: str) -> CompanyContext:
