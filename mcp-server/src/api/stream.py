@@ -21,8 +21,6 @@ SEQUENCE, not real-time interleaving — the frontend renders each step as it
 arrives, which still gives the progressive reveal a demo wants.
 """
 
-from __future__ import annotations
-
 import json
 import os
 from typing import Any, AsyncGenerator

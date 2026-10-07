@@ -1,6 +1,5 @@
 """Sync tool for Sage MCP server with real CRM adapters."""
 
-import os
 from datetime import datetime, timezone
 
 from sync import SalesforceSync, HubSpotSync, PipedriveSync, LocalCRMSync

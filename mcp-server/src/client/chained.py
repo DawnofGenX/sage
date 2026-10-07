@@ -1,6 +1,4 @@
 """MCP client for Sage — speaks Streamable HTTP with result-type narrowing."""
-from __future__ import annotations
-
 import time
 from typing import Any
 

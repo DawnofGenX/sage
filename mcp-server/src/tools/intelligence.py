@@ -1,6 +1,6 @@
 """Intelligence tools for Sage MCP server."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from llm.provider import LLMProvider
 from tools.common import _get_db

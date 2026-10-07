@@ -1,6 +1,5 @@
 """Proactive insight engine combining rule-based triggers with LLM analysis."""
 from datetime import datetime, timedelta
-from typing import Any
 
 from aws.eventbridge import EventBridgeTriggers
 from data.db import Database

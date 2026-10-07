@@ -19,8 +19,6 @@ Honesty note — why this shape:
     which were local arithmetic — without reading this docstring.
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 from typing import Any, Protocol, runtime_checkable

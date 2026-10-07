@@ -5,8 +5,6 @@ messages endpoints. The wire format is auto-detected from the API URL via
 :func:`detect_format`.
 """
 
-from __future__ import annotations
-
 import json
 import re
 from typing import Any, Protocol

@@ -5,8 +5,6 @@ the previous step's response; nothing is hardcoded. If extraction yields no
 contacts, the chain halts immediately rather than inventing data.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field

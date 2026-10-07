@@ -36,7 +36,6 @@ import sqlite3
 import tempfile
 import uuid
 from datetime import datetime
-from typing import Any
 
 
 class DynamoDBStore:
