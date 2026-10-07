@@ -27,4 +27,4 @@ htmlcov/
 # Editor
 .vscode/
 .idea/
-*.swp
+*.swpmcp-server/static/
