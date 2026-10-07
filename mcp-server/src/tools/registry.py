@@ -1,4 +1,5 @@
 """Central tool registry for Sage MCP server."""
+from client.demo_flow import run_agentic_loop
 from tools.extraction import extract_from_call, get_contact_context, get_pipeline_health
 from tools.crud import (
     create_contact, update_contact, create_deal, update_deal_stage,
@@ -23,4 +24,5 @@ ALL_TOOLS = [
     sync_to_crm,
     get_company_context, get_activities, get_deal_history,
     create_task, enrich_contact, get_forecast,
+    run_agentic_loop,
 ]

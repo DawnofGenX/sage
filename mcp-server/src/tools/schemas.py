@@ -237,7 +237,15 @@ class DealInsights(BaseModel):
 
 
 class SyncResult(ProvenanceMixin):
-    """Output of ``sync_to_crm`` — result of syncing to an external CRM."""
+    """Output of ``sync_to_crm`` — result of syncing to an external CRM.
+
+    Every field except `status` is optional. The success path omits `error`
+    entirely, so declaring it required (even as `str | None`) made FastMCP
+    reject every successful sync with "'error' is a required property" —
+    found by running the chained loop, not by any schema test.
+    """
+
+    model_config = ConfigDict(extra="allow")
 
     status: str = Field(
         ...,
@@ -246,22 +254,22 @@ class SyncResult(ProvenanceMixin):
             "'not_configured', or 'error'."
         ),
     )
-    target: str = Field(..., description="Target CRM system.")
+    target: str | None = Field(
+        default=None, description="Target CRM system."
+    )
     record_id: str | None = Field(
-        ...,
+        default=None,
         description="ID of the record in the target CRM, or None if not synced.",
     )
-    idempotency_key: str = Field(
-        ...,
-        description="Idempotency key for this sync.",
+    idempotency_key: str | None = Field(
+        default=None, description="Idempotency key for this sync."
     )
     synced_at: str | None = Field(
-        ...,
+        default=None,
         description="ISO timestamp of when the sync occurred, or None.",
     )
     error: str | None = Field(
-        ...,
-        description="Error message if sync failed, or None.",
+        default=None, description="Error message if sync failed, or None."
     )
 
 

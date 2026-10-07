@@ -146,7 +146,7 @@ async def update_deal_stage(deal_id: int, stage: str) -> UpdatedRecord:
 async def schedule_followup(
     contact_id: int,
     title: str,
-    due_date: str,
+    due_date: str | None = None,
     deal_id: int = None,
     notes: str = None,
 ) -> CreatedRecord:
@@ -155,7 +155,10 @@ async def schedule_followup(
     Args:
         contact_id: Associated contact ID.
         title: Follow-up title.
-        due_date: Due date (ISO format string).
+        due_date: Optional due date (ISO format string). A follow-up with no
+            agreed date is normal -- many calls end without one -- so this is
+            optional rather than required. It was previously a required str,
+            which made the tool unusable for exactly the common case.
         deal_id: Optional associated deal ID.
         notes: Additional notes.
 
