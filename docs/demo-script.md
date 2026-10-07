@@ -49,26 +49,26 @@
 
 ## Segment 3: Auto-Extraction [0:25 – 0:40]
 
-**Visual:** The ExtractionPipeline component runs through all 4 steps. Each step animates from "pending" → "running" → "complete" with checkmarks. The ReasoningTrace panel below shows the 7-step internal trace. Real LLM extraction is happening (Amazon Nova via AWS Bedrock).
+**Visual:** The ExtractionPipeline component runs through all 4 stages (2 LLM passes + local validation). Each stage animates from "pending" → "running" → "complete" with checkmarks. The ReasoningTrace panel below shows the 7-step internal trace. Real LLM extraction is happening (Amazon Nova via AWS Bedrock).
 
 **On-screen text:**
 - "Extracting insights..."
 - "Amazon Nova via AWS Bedrock"
-- Step labels: "Entity Extraction" → "Intent Classification" → "Structured Record" → "Schema Validation"
+- Step labels: "Entity Extraction" → "Intent Classification" → "Record Generation" → "Schema Validation (local)"
 
 **Voiceover:**
 > "After the call, Sage extracts everything using Amazon Nova: contacts, deals, follow-ups, sentiment, buying signals."
 
 **UI elements to reference:**
-- **ExtractionPipeline component:** 4 steps with animated progress
-  - Step 1: Entity Extraction — "Extract people, companies, amounts, dates"
-  - Step 2: Intent Classification — "Classify call intent and purpose"
-  - Step 3: Structured Record — "Generate CRM records from transcript"
-  - Step 4: Schema Validation — "Validate and normalize extracted data"
+- **ExtractionPipeline component:** 4 stages with animated progress (2 LLM passes + local validation)
+  - Stage 1: Entity Extraction — "Extract people, companies, amounts, dates" (LLM pass 1)
+  - Stage 2: Intent Classification — "Classify call intent and purpose" (LLM pass 1)
+  - Stage 3: Record Generation — "Generate CRM records from transcript" (LLM pass 2)
+  - Stage 4: Schema Validation — "Validate and normalize extracted data" (local, no LLM)
 - **ReasoningTrace component:** 7-step internal trace (Tokenize → NER → Intent → Record → Validate → Deduplicate → Write)
 - **Extract Insights button:** Shows spinner + "Processing..." during extraction
 
-**Action:** Click "Extract Insights" button → watch all 4 pipeline steps complete → extraction result panel appears with structured data.
+**Action:** Click "Extract Insights" button → watch all 4 pipeline stages complete → extraction result panel appears with structured data.
 
 ---
 

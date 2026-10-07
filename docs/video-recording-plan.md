@@ -68,7 +68,7 @@ Record in this order. Each segment is a separate take — you can stop and resta
 ### Segment 3: Auto-Extraction (0:25–0:40)
 - [ ] Show ExtractionPipeline component
 - [ ] Trigger extraction (click "Extract" or auto-trigger after transcript)
-- [ ] Show all 4 steps completing: Entity Extraction → Intent Classification → Structured Record → Schema Validation
+- [ ] Show all 4 stages completing: Entity Extraction → Intent Classification → Record Generation → Schema Validation
 - [ ] On-screen text: "Extracting insights..."
 - [ ] Voiceover: "After the call, Sage extracts everything using Amazon Nova: contacts, deals, follow-ups, sentiment, buying signals."
 

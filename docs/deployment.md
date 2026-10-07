@@ -250,7 +250,7 @@ After deployment, verify:
 - [ ] `GET /health` returns `{"status": "ok", "server": "sage", "version": "1.0.0"}`
 - [ ] Web simulator loads at the frontend URL
 - [ ] Voice input or sample transcript loads correctly
-- [ ] "Extract Insights" button runs the 4-step pipeline
+- [ ] "Extract Insights" button runs the 2-pass extraction pipeline
 - [ ] Proactive insights generate successfully
 - [ ] Pipeline board displays deals
 - [ ] CRM sync button shows success toast

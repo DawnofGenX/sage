@@ -128,10 +128,10 @@ Record each segment as a separate take. You can stop and restart between segment
 - [ ] Switch to `Simulator` scene
 - [ ] Start recording
 - [ ] Click "Extract Insights" button
-- [ ] Show ExtractionPipeline running through all 4 steps:
+- [ ] Show ExtractionPipeline running through all 4 stages (2 LLM passes + local validation):
   - [ ] Step 1: Entity Extraction (running → complete)
   - [ ] Step 2: Intent Classification (running → complete)
-  - [ ] Step 3: Structured Record (running → complete)
+  - [ ] Step 3: Record Generation (running → complete)
   - [ ] Step 4: Schema Validation (running → complete)
 - [ ] Show ReasoningTrace panel with 7-step internal trace
 - [ ] Show extraction result with structured data

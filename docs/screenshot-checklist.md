@@ -54,7 +54,7 @@ All screenshots should be captured at **1920×1080** resolution for consistency.
 
 ## Screenshot 3: Extraction Pipeline in Action
 
-**What to capture:** ExtractionPipeline component with steps completing, showing the 4-step process.
+**What to capture:** ExtractionPipeline component with stages completing, showing the 4-stage process (2 LLM passes + local validation).
 
 **How:**
 1. Load a sample call first (click "Load Sample Call" → select one)
@@ -65,7 +65,7 @@ All screenshots should be captured at **1920×1080** resolution for consistency.
 6. Save as: `screenshots/03-extraction-pipeline.png`
 
 **Checklist:**
-- [ ] All 4 steps visible: Entity Extraction, Intent Classification, Structured Record, Schema Validation
+- [ ] All 4 stages visible: Entity Extraction, Intent Classification, Record Generation, Schema Validation
 - [ ] At least one step shows a checkmark (complete)
 - [ ] At least one step shows progress indicator (in progress)
 - [ ] Step descriptions readable

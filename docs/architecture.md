@@ -22,7 +22,7 @@ Sage is a passive sales intelligence layer that listens to sales conversations, 
 │  │  ┌────────────┐  ┌────────────┐  ┌────────────────────────┐  │  │
 │  │  │  LLM       │  │  Extraction│  │  Proactive             │  │  │
 │  │  │  Provider  │  │  Pipeline  │  │  Engine                │  │  │
-│  │  │  (Nova/    │  │  (4-step)  │  │  (Rules + LLM)         │  │  │
+│  │  │  (Nova/    │  │  (2-pass)  │  │  (Rules + LLM)         │  │  │
 │  │  │   Mock)    │  │            │  │                        │  │  │
 │  │  └─────┬──────┘  └─────┬──────┘  └───────────┬────────────┘  │  │
 │  │        │               │                      │               │  │
@@ -48,7 +48,7 @@ The core backend, built with FastMCP. Exposes tools over Streamable HTTP for LLM
 | Server | `src/server.py` | FastMCP server entry point, tool registration |
 | LLM Provider | `src/llm/provider.py` | Pluggable LLM API client (OpenAI / Anthropic, auto-detected) with mock fallback |
 | LLM Formats | `src/llm/formats.py` | Wire-format handlers: OpenAI chat/completions + Anthropic messages |
-| Extraction Pipeline | `src/extraction/pipeline.py` | 4-step transcript processing: entities → intent → record → validation |
+| Extraction Pipeline | `src/extraction/pipeline.py` | 2-pass transcript processing: entities + intent (concurrent) → record → local validation |
 | Proactive Engine | `src/proactive/engine.py` | Rule-based + LLM insight generation from CRM data |
 | Database | `src/data/db.py` | SQLite CRUD operations for contacts, deals, followups, call logs |
 | Tools | `src/tools/` | MCP tool definitions (CRUD, extraction, intelligence, sync) |
@@ -61,7 +61,7 @@ React + TypeScript + Vite + Tailwind CSS frontend that simulates the Alexa+ expe
 |-----------|---------|
 | `VoiceInput` | Web Speech API integration with fallback text input |
 | `TranscriptView` | Live transcript display with sample call loading |
-| `ExtractionPipeline` | Visual 4-step pipeline progress with animated transitions |
+| `ExtractionPipeline` | Visual 4-stage pipeline progress (2 LLM passes + local validation) with animated transitions |
 | `ProactiveInsights` | Urgency-coded insight cards (overdue/stuck/info) |
 | `PipelineBoard` | Kanban-style deal pipeline with sync button |
 | `ReasoningTrace` | Detailed 7-step LLM reasoning trace visualization |
@@ -98,11 +98,16 @@ SQLite database with 5 tables:
                                        └──────────────┘     └──────────────┘
 ```
 
-### Extraction Pipeline (4 Steps)
+### Extraction Pipeline (2 Passes, 4 Stages)
 
+**Pass 1** (concurrent):
 1. **Entity Extraction** — Identify people, companies, amounts, dates
 2. **Intent Classification** — Classify as `new_lead`, `follow_up`, `deal_update`, or `general`
-3. **Structured Record Generation** — Produce contacts, deals, followups, sentiment, buying signals, risks
+
+**Pass 2** (grounded in pass-1 findings):
+3. **Record Generation** — Produce contacts, deals, followups, sentiment, buying signals, risks
+
+**Local** (no LLM):
 4. **Schema Validation** — Validate required fields, normalize types, ensure data integrity
 
 ### Proactive Insight Generation
@@ -122,14 +127,14 @@ SQLite database with 5 tables:
 | `create_deal` | Create a new deal | `contact_id`, `title`, `value?`, `stage?`, `notes?` |
 | `update_deal_stage` | Update deal stage | `deal_id`, `stage` |
 | `schedule_followup` | Schedule a follow-up task | `contact_id`, `title`, `due_date`, `deal_id?`, `notes?` |
-| `draft_followup_email` | Draft follow-up email via LLM | `contact`, `context`, `tone?` |
+| `draft_followup_email` | Draft follow-up email using LLM output (template fallback only on mock provenance) | `contact`, `context`, `tone?` |
 | `log_call` | Log a call record | `contact_id`, `transcript`, `summary?`, `duration_seconds?`, `deal_id?` |
 
 ### Extraction Tools
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `extract_from_call` | Run full 4-step extraction pipeline | `transcript` |
+| `extract_from_call` | Run full 2-pass extraction pipeline | `transcript` |
 | `get_contact_context` | Get contact with deals and history | `name`, `include_history?`, `include_deals?` |
 | `get_pipeline_health` | Get pipeline metrics | `timeframe?`, `include_sentiment?` |
 
@@ -147,7 +152,7 @@ SQLite database with 5 tables:
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `sync_to_crm` | Sync record to external CRM | `record`, `target`, `idempotency_key` |
+| `sync_to_crm` | Sync record to CRM (returns `not_configured` when credentials missing, `already_synced` on repeated key) | `record`, `target`, `idempotency_key` |
 
 ### System Tools
 
@@ -178,6 +183,7 @@ Content-Type: application/json
 - `salesforce`
 - `hubspot`
 - `pipedrive`
+- `local` — SQLite-backed CRM with Salesforce-shaped field names (for demo without external credentials)
 
 ## Deployment Architecture
 
@@ -240,7 +246,7 @@ Sage supports AWS-native infrastructure for production deployments. Each AWS ada
 │  │  ┌────────────┐  ┌────────────┐  ┌────────────────────────┐     │  │
 │  │  │  Bedrock   │  │  Extraction│  │  Proactive             │     │  │
 │  │  │  Provider  │  │  Pipeline  │  │  Engine                │     │  │
-│  │  │  (Nova/    │  │  (4-step)  │  │  (Rules + LLM)         │     │  │
+│  │  │  (Nova/    │  │  (2-pass)  │  │  (Rules + LLM)         │     │  │
 │  │  │   Claude)  │  │            │  │                        │     │  │
 │  │  └─────┬──────┘  └─────┬──────┘  └───────────┬────────────┘     │  │
 │  │        │               │                      │                   │  │

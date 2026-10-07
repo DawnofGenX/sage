@@ -19,12 +19,12 @@ When Amazon launched Alexa+ with agentic capabilities, I saw an opportunity. Not
 Sage is a passive sales intelligence layer built as an MCP server (spec 2025-11-25, Streamable HTTP) that:
 
 - **Listens** to sales calls via Echo device (office) or phone app (field)
-- **Extracts** contacts, deals, follow-ups, sentiment, buying signals, and competitor mentions using Amazon Nova via AWS Bedrock
+- **Extracts** contacts, deals, follow-ups, sentiment, buying signals, and competitor mentions using Amazon Nova via AWS Bedrock (two LLM passes: entities + intent concurrent, then record generation grounded in pass-1 findings)
 - **Surfaces** proactive insights: "You haven't followed up with Acme in 20 days. Their Q4 budget deadline is Friday."
-- **Syncs** bidirectionally to Salesforce, HubSpot, and Pipedrive via MCP
+- **Syncs** to Salesforce, HubSpot, Pipedrive, or a local SQLite-backed CRM via MCP — never fabricates success when credentials are missing
 - **Visualizes** pipeline health on Echo Show with deal boards, stuck-deal alerts, and sentiment trends
 
-The MCP server exposes 16 tools like `extract_from_call`, `get_pipeline_health`, `get_contact_context`, `draft_followup_email`, and `sync_to_crm`. A web simulator demonstrates the full experience for judges who don't have Alexa+ hardware.
+The MCP server exposes 22 tools with typed output schemas, including `extract_from_call`, `get_pipeline_health`, `get_contact_context`, `draft_followup_email`, and `sync_to_crm`. A web simulator demonstrates the full experience for judges who don't have Alexa+ hardware.
 
 ### How I Built It
 

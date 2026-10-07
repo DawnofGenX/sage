@@ -156,7 +156,7 @@ The LinkedIn URL is generated from the name with a simple string replacement. Th
 - **No pagination** — `get_all_deals()`, `get_all_contacts()`, `get_call_logs()` return everything.
 
 ### LLM Pipeline
-- **Single LLM call for all extraction** — claims 4 steps but makes 1 call. For long transcripts, this will hit token limits.
+- **Two-pass extraction** — pass 1 issues entities + intent concurrently; pass 2 generates the structured record grounded in pass-1 findings. Stage 4 is local schema validation, not a model call.
 - **No streaming** — client waits for full response.
 - **No batching** — each call is individual.
 - **No caching** — same transcript processed twice makes two API calls.
@@ -225,7 +225,7 @@ The LinkedIn URL is generated from the name with a simple string replacement. Th
 
 | Issue | Severity | Details |
 |-------|----------|---------|
-| 4-step pipeline is 1 LLM call | **High** | Steps 1-3 are derived from the same LLM response. Not a real multi-step pipeline. |
+| Two-pass pipeline is 2 LLM calls | **High** | Pass 1 issues entities + intent concurrently; pass 2 generates the record. Stage 4 is local validation. |
 | `draft_followup_email` ignores LLM output | **High** | The email body is template-generated, not LLM-generated. |
 | No confidence thresholding | Medium | Low-confidence extractions treated same as high-confidence. |
 | No prompt versioning | Medium | Prompts are hardcoded strings, not versioned. |
@@ -235,7 +235,7 @@ The LinkedIn URL is generated from the name with a simple string replacement. Th
 | No token limit handling | Medium | Long transcripts may exceed context window — no chunking. |
 
 ### Recommendations
-1. Either make the 4-step pipeline real (4 separate LLM calls with intermediate validation) or rename it to "single-call extraction with 4 output views"
+1. Pipeline now uses 2 LLM passes (entities + intent concurrent, then record generation) with local schema validation as stage 4
 2. Fix `draft_followup_email` to actually use LLM-generated content
 3. Add confidence thresholding — flag low-confidence extractions for review
 4. Add prompt versioning (store prompts in separate files with version tags)

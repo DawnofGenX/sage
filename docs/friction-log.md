@@ -36,7 +36,7 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 |-------|---------|
 | **Task** | Run LLM extraction calls concurrently for improved throughput |
 | **Expected** | Multiple async tool calls execute concurrently when possible; `asyncio.gather()` works across tool boundaries |
-| **Actual** | FastMCP runs tools sequentially by default. The extraction pipeline's 4 steps are inherently dependent (each needs the previous result), but independent operations like `get_contact_context` and `get_pipeline_health` could run concurrently. No built-in batch tool execution. |
+| **Actual** | FastMCP runs tools sequentially by default. The extraction pipeline's 2 passes are inherently dependent (pass 2 needs pass-1 results), but independent operations like `get_contact_context` and `get_pipeline_health` could run concurrently. No built-in batch tool execution. |
 | **Severity** | Low |
 | **Workaround** | Kept the pipeline sequential by design (steps are dependent). For the web simulator, used client-side `Promise.all()` for independent API calls. The mock LLM provider is synchronous, so no async bottleneck in practice. |
 | **Suggestion** | Add a `Promise.all()` equivalent for MCP — either a `batch_tool_call` endpoint or automatic parallelization of independent tool calls in a single request. A `mcp.parallel([tool1, tool2])` API would be useful. |
@@ -82,6 +82,32 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 
 ---
 
+## 7. Four-Step Extraction Claim Withdrawn
+
+| Field | Details |
+|-------|---------|
+| **Task** | Documentation claims a four-step extraction pipeline |
+| **Expected** | Docs describe the same architecture as the code implements |
+| **Actual** | The code made one LLM call and derived four output views from it. The docs claimed four inference stages. This was a correctness defect — the submission text misstated what the software does. |
+| **Severity** | High |
+| **Fix** | Commit 30906d6 changed the code to two real LLM passes (entities + intent concurrent, then record generation). Stage 4 is local schema validation, not a model call. All docs updated to describe two passes / three calls, with stage 4 explicitly labelled as local validation. The retraction is stated here plainly rather than quietly edited out. |
+| **Suggestion** | When code changes behaviour, grep the docs for the old claim in the same PR. A doc that says "four steps" after the code does two passes is a lie judges can catch. |
+
+---
+
+## 8. `sync_to_crm` Fabricated Success
+
+| Field | Details |
+|-------|---------|
+| **Task** | `sync_to_crm` returns a truthful status when CRM credentials are missing |
+| **Expected** | Tool returns `not_configured` with a reason when no CRM is configured |
+| **Actual** | Tool returned `{"status": "success", "record_id": "sal_test-123"}` — a fabricated success with a synthesised ID. A judge who configured no CRM credentials and saw "Synced to Salesforce" had been told something untrue by the software. |
+| **Severity** | High |
+| **Fix** | Commit ab2f85e removed the fabricated-success path. `sync_to_crm` now returns `not_configured` when credentials are missing, `already_synced` on a repeated idempotency key, and a real record ID only when a real write occurred. A `local` sync target was added — a working CRM backed by Sage's own SQLite tables with Salesforce-shaped field names. |
+| **Suggestion** | Never fabricate success responses. If a tool cannot do what it claims, it must say so explicitly. |
+
+---
+
 ## Summary
 
 | # | Issue | Severity | Status |
@@ -92,3 +118,5 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 | 4 | CORS for web simulator | High | Resolved via Vite proxy |
 | 5 | LLM provider fallback chain | Medium | Partial workaround |
 | 6 | Database connection management | Low | Sufficient for demo |
+| 7 | Four-step extraction claim | High | Withdrawn — docs corrected |
+| 8 | `sync_to_crm` fabricated success | High | Fixed — returns `not_configured` |
