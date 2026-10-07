@@ -105,6 +105,20 @@ async def list_tools():
     }
 
 
+from api.stream import AgenticLoopRequest, create_agentic_loop_response
+
+
+@app.post("/api/stream/agentic_loop")
+async def stream_agentic_loop(request: AgenticLoopRequest):
+    """Stream the chained agentic loop as Server-Sent Events.
+
+    POST rather than GET because the transcript is a request body, and the
+    frontend cannot use EventSource (which is GET-only). It parses the frames
+    by hand instead; see web-simulator/src/lib/api.ts.
+    """
+    return create_agentic_loop_response(request.transcript, request.target)
+
+
 @app.post("/api/tools/{tool_name}")
 async def call_tool(tool_name: str, request: dict[str, Any]):
     if tool_name not in TOOLS:
