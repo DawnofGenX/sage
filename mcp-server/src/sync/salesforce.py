@@ -1,13 +1,23 @@
 """Salesforce CRM sync adapter using OAuth 2.0 username-password flow."""
-
 import os
 from typing import Optional
 
 import httpx
 
+from sync.base import BaseSyncAdapter
 
-class SalesforceSync:
+
+class SalesforceSync(BaseSyncAdapter):
     """Sync contacts and deals to Salesforce via REST API."""
+
+    crm_name = "Salesforce"
+    required_env_vars = [
+        "SALESFORCE_CLIENT_ID",
+        "SALESFORCE_CLIENT_SECRET",
+        "SALESFORCE_USERNAME",
+        "SALESFORCE_PASSWORD",
+        "SALESFORCE_SECURITY_TOKEN",
+    ]
 
     def __init__(self):
         self.client_id = os.environ.get("SALESFORCE_CLIENT_ID")
@@ -18,19 +28,10 @@ class SalesforceSync:
         self.access_token: Optional[str] = None
         self.instance_url: Optional[str] = None
 
-    def _is_configured(self) -> bool:
-        return all([
-            self.client_id,
-            self.client_secret,
-            self.username,
-            self.password,
-            self.security_token,
-        ])
-
     async def authenticate(self) -> dict:
         """OAuth 2.0 username-password flow to Salesforce."""
         if not self._is_configured():
-            return {"error": "Salesforce not configured"}
+            return self.not_configured_response()
 
         auth_url = "https://login.salesforce.com/services/oauth2/token"
         payload = {
@@ -53,7 +54,7 @@ class SalesforceSync:
     async def create_contact(self, contact: dict) -> dict:
         """Create a Contact in Salesforce."""
         if not self._is_configured():
-            return {"error": "Salesforce not configured"}
+            return self.not_configured_response()
 
         if not self.access_token:
             auth_result = await self.authenticate()
@@ -80,7 +81,7 @@ class SalesforceSync:
     async def create_deal(self, deal: dict) -> dict:
         """Create an Opportunity in Salesforce."""
         if not self._is_configured():
-            return {"error": "Salesforce not configured"}
+            return self.not_configured_response()
 
         if not self.access_token:
             auth_result = await self.authenticate()

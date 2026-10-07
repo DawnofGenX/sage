@@ -1,23 +1,24 @@
 """HubSpot CRM sync adapter."""
-
 import os
 
 import httpx
 
+from sync.base import BaseSyncAdapter
 
-class HubSpotSync:
+
+class HubSpotSync(BaseSyncAdapter):
     """Sync contacts and deals to HubSpot via REST API."""
+
+    crm_name = "HubSpot"
+    required_env_vars = ["HUBSPOT_ACCESS_TOKEN"]
 
     def __init__(self):
         self.access_token = os.environ.get("HUBSPOT_ACCESS_TOKEN")
 
-    def _is_configured(self) -> bool:
-        return bool(self.access_token)
-
     async def create_contact(self, contact: dict) -> dict:
         """Create a contact in HubSpot."""
         if not self._is_configured():
-            return {"error": "HubSpot not configured"}
+            return self.not_configured_response()
 
         url = "https://api.hubapi.com/crm/v3/objects/contacts"
         headers = {
@@ -44,7 +45,7 @@ class HubSpotSync:
     async def create_deal(self, deal: dict) -> dict:
         """Create a deal in HubSpot."""
         if not self._is_configured():
-            return {"error": "HubSpot not configured"}
+            return self.not_configured_response()
 
         url = "https://api.hubapi.com/crm/v3/objects/deals"
         headers = {

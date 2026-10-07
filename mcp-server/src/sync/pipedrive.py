@@ -1,23 +1,24 @@
 """Pipedrive CRM sync adapter."""
-
 import os
 
 import httpx
 
+from sync.base import BaseSyncAdapter
 
-class PipedriveSync:
+
+class PipedriveSync(BaseSyncAdapter):
     """Sync contacts and deals to Pipedrive via REST API."""
+
+    crm_name = "Pipedrive"
+    required_env_vars = ["PIPEDRIVE_API_TOKEN"]
 
     def __init__(self):
         self.api_token = os.environ.get("PIPEDRIVE_API_TOKEN")
 
-    def _is_configured(self) -> bool:
-        return bool(self.api_token)
-
     async def create_contact(self, contact: dict) -> dict:
         """Create a person in Pipedrive."""
         if not self._is_configured():
-            return {"error": "Pipedrive not configured"}
+            return self.not_configured_response()
 
         url = "https://api.pipedrive.com/v1/persons"
         params = {"api_token": self.api_token}
@@ -38,7 +39,7 @@ class PipedriveSync:
     async def create_deal(self, deal: dict) -> dict:
         """Create a deal in Pipedrive."""
         if not self._is_configured():
-            return {"error": "Pipedrive not configured"}
+            return self.not_configured_response()
 
         url = "https://api.pipedrive.com/v1/deals"
         params = {"api_token": self.api_token}
