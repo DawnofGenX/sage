@@ -10,9 +10,29 @@ from data.db import Database
 
 
 def load_json(filename: str) -> list:
-    """Load a JSON file from the data directory."""
-    data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
-    filepath = os.path.join(data_dir, filename)
+    """Load a JSON file from the data directory.
+
+    Seed data lives at `<repo>/mcp-server/data/` — one tracked copy, inside the
+    Docker image's build context (`build: ./mcp-server`), so the container and
+    a checkout resolve the same bytes.
+
+    The previous implementation resolved `<src/data>/../../../data` (the repo
+    root), which worked from a checkout but resolved to `/data` inside the
+    image and raised FileNotFoundError during the build-time seed — leaving the
+    container with an empty database while the test suite still passed.
+    """
+    src_data_dir = os.path.dirname(__file__)
+    # src/data/seed.py -> mcp-server/data/
+    data_dir = os.path.join(src_data_dir, "..", "..", "data")
+
+    filepath = os.path.abspath(os.path.join(data_dir, filename))
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(
+            f"Seed data {filename!r} not found at {filepath}. Expected the file "
+            "at mcp-server/data/ (the Docker build context and the checkout both "
+            "resolve this path)."
+        )
+
     with open(filepath, "r") as f:
         return json.load(f)
 
