@@ -4,7 +4,7 @@
 Sage — The Alexa+ Sales Intelligence Layer
 
 ## Elevator Pitch
-Sage listens to your sales calls, auto-extracts insights with Amazon Nova, and proactively tells you what you're forgetting — synced to your CRM via MCP.
+Sage listens to your sales calls, auto-extracts insights with a two-pass LLM pipeline, and proactively tells you what you're forgetting — synced to your CRM via MCP.
 
 ## About the Project
 
@@ -42,7 +42,7 @@ The MCP server exposes 23 tools with typed output schemas, including `extract_fr
 
 2. **Latency budget**: Voice interactions demand sub-second responses. I implemented per-tool timeouts, pre-warming of likely-needed data at session start, and filler speech ("Let me pull that up") during tool calls to stay invisible.
 
-3. **Extraction accuracy**: Sales conversations are messy — interruptions, jargon, multiple languages. Fine-tuning the Nova prompt with few-shot examples and structured output schemas was critical.
+3. **Extraction accuracy**: Sales conversations are messy — interruptions, jargon, multiple languages. Few-shot prompting plus structured output schemas kept the extracted schema stable. Accuracy is measured against the deterministic fallback in `docs/extraction-eval.md`, not a frontier model — the eval says so, and so does this claim.
 
 4. **No Alexa+ hardware access**: The MCP toolkit is gated preview. I built a web simulator that demonstrates the full MCP server + Alexa+ experience without requiring physical hardware — positioning it as a "client-agnostic MCP server" feature, not a workaround.
 
@@ -52,5 +52,5 @@ The MCP server exposes 23 tools with typed output schemas, including `extract_fr
 
 - MCP is the right protocol for agentic tool use — but the spec is still maturing, and friction logs earn judging bonuses
 - Passive listening is a fundamentally different UX paradigm than voice commands — it requires rethinking the entire interaction model
-- AWS Bedrock + Nova is genuinely capable for structured extraction from noisy audio transcripts
+- The accuracy figures in this submission are measured against the deterministic fallback, not a frontier model — `docs/extraction-eval.md` records exactly what was measured, and the demo runs in that mode by default
 - The best hackathon submissions are specific, surprising, and polished — not broad and generic
