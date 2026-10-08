@@ -1,3 +1,5 @@
+import json
+
 from fastmcp import FastMCP
 from tools.registry import ALL_TOOLS
 
@@ -14,14 +16,29 @@ for tool in ALL_TOOLS:
 async def pipeline_status() -> str:
     from tools.extraction import get_pipeline_health
     result = await get_pipeline_health()
-    return str(result)
+    # json.dumps, NOT str(result): a resource body is read by clients as data,
+    # and str(dict) emits a Python repr (single quotes, None) that no JSON
+    # parser accepts.
+    #
+    # Tolerant of the return type: get_pipeline_health is annotated
+    # `-> PipelineHealth` (a Pydantic model) but returns a plain dict at
+    # runtime, so a bare .model_dump() would raise and the resource would 500.
+    if hasattr(result, "model_dump"):
+        result = result.model_dump()
+    return json.dumps(result, default=str)
 
 @mcp.resource("sage://contacts/{contact_id}")
 async def contact_resource(contact_id: str) -> str:
     from data.db import Database
     db = Database()
-    contact = db.get_contact(int(contact_id))
-    return str(contact) if contact else "Contact not found"
+    try:
+        cid = int(contact_id)
+    except ValueError:
+        # FastMCP surfaces a ValueError as a protocol error, which loses the
+        # "your URI was malformed" signal; a JSON body keeps it machine-readable.
+        return json.dumps({"error": f"contact_id must be an integer, got {contact_id!r}"})
+    contact = db.get_contact(cid)
+    return json.dumps(contact, default=str) if contact else json.dumps({"error": "Contact not found"})
 
 @mcp.prompt()
 def analyze_call(transcript: str) -> str:

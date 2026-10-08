@@ -90,18 +90,25 @@ async def list_tools():
     state. See docs/sse-contract-bugs.md.
     """
     tools = await mcp.list_tools()
-    return {
-        "count": len(tools),
-        "tools": [
+    rows = []
+    for t in tools:
+        # FastMCP's list_tools() yields FunctionTool objects, which expose
+        # `parameters` and `output_schema` — there is no `input_schema` field.
+        # Reading it with getattr(t, "input_schema", None) silently yields None
+        # for every tool, so /api/tools published null schemas while the MCP
+        # protocol surface (which converts to the wire Tool type) showed them.
+        input_schema = getattr(t, "parameters", None)
+        if input_schema is None:
+            input_schema = getattr(t, "input_schema", None)
+        rows.append(
             {
                 "name": t.name,
                 "description": t.description or "",
-                "input_schema": getattr(t, "input_schema", None),
+                "input_schema": input_schema,
                 "output_schema": getattr(t, "output_schema", None),
             }
-            for t in tools
-        ],
-    }
+        )
+    return {"count": len(tools), "tools": rows}
 
 
 from api.stream import AgenticLoopRequest, create_agentic_loop_response
