@@ -49,7 +49,7 @@
 
 ## Segment 3: Auto-Extraction [0:25 – 0:40]
 
-**Visual:** The ExtractionPipeline component runs through all 4 stages (2 LLM passes + local validation). Each stage animates from "pending" → "running" → "complete" with checkmarks. The ReasoningTrace panel below shows the 7-step internal trace. Real LLM extraction is happening (Amazon Nova via AWS Bedrock).
+**Visual:** The ExtractionPipeline component runs through all 4 stages (2 LLM passes + local validation). Each stage animates from "pending" → "running" → "complete" with checkmarks. The ReasoningTrace panel below shows the 7-step internal trace. Extraction runs through the pluggable LLM provider: Amazon Nova via AWS Bedrock when `LLM_API_KEY`/credentials are present, deterministic fallback otherwise — state which mode the demo is actually running in (the recorded demo used mock mode).
 
 **On-screen text:**
 - "Extracting insights..."
@@ -103,7 +103,7 @@
 **On-screen text:**
 - "Synced to Salesforce ✓"
 - "Sage. Your CRM that listens."
-- "github.com/yourusername/sage"
+- "github.com/DawnofGenX/sage"
 - "Built for Amazon Developer Hackathon 2026"
 
 **Voiceover:**

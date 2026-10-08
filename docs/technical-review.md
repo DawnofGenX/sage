@@ -4,6 +4,15 @@
 **Date:** 2026-10-05  
 **Scope:** Full codebase review of MCP server, AWS adapters, LLM integration, Alexa skill, REST API, and web simulator
 
+> **Superseded figures (2026-10-08):** This document is a dated snapshot of the
+> 2026-10-05 tree. Its figures were true then and are NOT current:
+> **22 MCP tools → 23** (`run_agentic_loop` added; verified live from
+> `tools/registry.py` = 23) and **163 tests → 298** (verified 2026-10-08,
+> `.venv/bin/python -m pytest tests/ -q` → `298 passed, 57 warnings in 8.19s`).
+> The "no structured output schemas" finding below is **resolved** — all 23 tools
+> return Pydantic models and publish typed `outputSchema`. Treat the rest of the
+> gaps as the audit-era findings they were, not a description of HEAD.
+
 ---
 
 ## Executive Summary

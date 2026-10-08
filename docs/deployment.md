@@ -14,7 +14,7 @@
 ### Option A: Docker Compose (Recommended)
 
 ```bash
-git clone https://github.com/yourusername/sage.git
+git clone https://github.com/DawnofGenX/sage.git
 cd sage
 docker compose up --build
 ```
@@ -31,10 +31,13 @@ cd mcp-server
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m src.server
+pip install -e .          # required — src/ is the import root
+python -m uvicorn src.api.rest:app --port 8000
 ```
 
 The server starts on `http://localhost:8000` with Streamable HTTP transport.
+`pip install -e .` is not optional: without it the process dies with
+`ModuleNotFoundError: No module named 'server'` at `src/api/rest.py:7`.
 
 #### Frontend (Web Simulator)
 
@@ -44,17 +47,29 @@ npm install
 npm run dev
 ```
 
-The dev server starts on `http://localhost:3000` with API proxy to `:8000`.
+The dev server starts on `http://localhost:3000` with Vite proxying `/api` to `:8000`.
 
 ---
 
 ## Docker Deployment
+
+**Verified 2026-10-08:** `docker compose build` then `docker compose up -d` produces both
+containers Up, `/api/health` → `{"status":"ok",...}`, `tools: 23`, MCP `initialize` → 200, and
+the SSE agentic loop streaming 5 steps + `status:success` through nginx to the SPA.
+
+The Python base image is **3.12** while the dev venv is 3.14. Annotations are therefore kept
+portable: self-referential return types are quoted (see `src/client/chained.py`) so the code
+imports under both interpreters.
 
 ### Build and Run
 
 ```bash
 docker compose up --build -d
 ```
+
+- Web simulator (what you open): http://localhost:3000 — nginx serves the SPA **and**
+  reverse-proxies `/api` and the SSE `/api/stream/` endpoint to the backend service.
+- MCP server: http://localhost:8000 (REST surface + Streamable HTTP mounted at `/mcp`)
 
 ### View Logs
 
@@ -71,7 +86,8 @@ docker compose down
 
 ### Persistent Data
 
-The SQLite database is stored in a Docker volume `sage-data`. To reset:
+The SQLite database is stored in a Docker volume `sage-data`. The image also seeds demo data
+at build time, so a fresh container is never empty. To reset:
 
 ```bash
 docker compose down -v

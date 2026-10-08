@@ -21,8 +21,8 @@ Built for the Amazon Developer Hackathon 2026.
 0:50 — CRM Sync: Everything synced automatically
 
 🔗 LINKS
-GitHub: https://github.com/yourusername/sage
-Live Demo: https://your-demo-url.vercel.app
+GitHub: https://github.com/DawnofGenX/sage
+Live Demo: <PUBLIC_DEMO_URL — fill in only after verifying from a cold private window; leave blank until then>
 Hackathon: https://amazon.devpost.com
 
 🛠️ BUILT WITH

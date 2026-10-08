@@ -186,6 +186,45 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 
 ---
 
+## 15. Docker image could not import the app
+
+| Field | Details |
+|-------|---------|
+| **Task** | `docker compose up` must produce a working stack — the first thing a judge tries |
+| **Expected** | Both images build, both containers serve |
+| **Actual** | Backend container exited immediately: `ModuleNotFoundError: No module named 'server'` at `src/api/rest.py:7`. The Dockerfile never ran `pip install -e .`, so the `src/`-as-import-root layout that the test suite already required did not hold inside the image. |
+| **Severity** | High |
+| **Fix** | Copy `pyproject.toml` + `src/`, then `pip install -e . --no-deps` (order matters: `egg_info` inspects `src/`, so an install before the COPY fails with `error in 'egg_base' option: 'src' does not exist`), then `python -m src.data.seed`. |
+| **Suggestion** | A `src/`-layout project needs the same editable install in every environment that imports it — image, venv, CI. Document it once at the top of `requirements.txt` rather than rediscovering it per environment. |
+
+---
+
+## 16. Python 3.12 vs 3.14 self-referential annotation
+
+| Field | Details |
+|-------|---------|
+| **Task** | Server must run on the Docker base image's interpreter |
+| **Expected** | Code that imports on 3.14 imports on 3.12 |
+| **Actual** | `src/client/chained.py:24` declared `async def __aenter__(self) -> SageMCPClient:` inside its own class body. On 3.12 (Docker) annotations are evaluated eagerly → `NameError: name 'SageMCPClient' is not defined`. On 3.14 PEP 649 lazy annotations hid the bug, so the local venv and 298 tests passed while Docker could not boot. |
+| **Severity** | High |
+| **Fix** | Quote the self-reference: `-> "SageMCPClient"`. Comment records why, so it is not "cleaned up" later. |
+| **Suggestion** | Test the declared deployment target's interpreter, not just the dev interpreter. A single-interpreter test suite cannot see version-portability defects. |
+
+---
+
+## 17. Docker frontend had no API route
+
+| Field | Details |
+|-------|---------|
+| **Task** | Built SPA must reach the backend inside the compose stack |
+| **Expected** | `localhost:3000` serves a working UI |
+| **Actual** | The image served HTML and 404'd every `/api` call. In dev, Vite proxies `/api` → `:8000` (`vite.config.ts`); the nginx stage in `web-simulator/Dockerfile` had no equivalent, so the relative `API_BASE` (`import.meta.env.VITE_API_URL || '/api'`) pointed at nothing. |
+| **Severity** | High |
+| **Fix** | Added `web-simulator/nginx.conf` proxying `/api/` (and `/api/stream/` with `proxy_buffering off` for SSE) to `http://mcp-server:8000`, copied into the image as the default site. Verified live: `/api/health` → ok, `tools: 23`, SSE chain → 5 steps + `status:success`. |
+| **Suggestion** | When a dev server proxies, say so next to the production web server config — or the proxy silently disappears in the container. |
+
+---
+
 ## Summary
 
 | # | Issue | Severity | Status |
@@ -204,3 +243,6 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 | 12 | `list_tools` 404 | Medium | Fixed — `GET /api/tools` added |
 | 13 | SSE parser contract bugs | High | Fixed — reference parser + tests |
 | 14 | Idempotency test not idempotent | Low | Fixed — unique key per run |
+| 15 | Docker image could not import the app | High | Fixed — `pip install -e .` in image |
+| 16 | Python 3.12 vs 3.14 self-referential annotation | High | Fixed — quoted annotation |
+| 17 | Docker frontend had no API route | High | Fixed — nginx `/api` proxy |

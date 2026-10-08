@@ -39,7 +39,7 @@ Create these scenes in the Scene Collection:
 **Scene: EndCard**
 - [ ] Add Source → Color Source → dark background (#0f172a or similar)
 - [ ] Add Source → Text (GDI+) → "Sage. Your CRM that listens."
-- [ ] Add Source → Text (GDI+) → "github.com/yourusername/sage"
+- [ ] Add Source → Text (GDI+) → "github.com/DawnofGenX/sage"
 - [ ] Add Source → Text (GDI+) → "Built for Amazon Developer Hackathon 2026"
 
 ### Audio Setup

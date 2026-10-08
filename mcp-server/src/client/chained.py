@@ -21,7 +21,10 @@ class SageMCPClient:
         self._cm: Any = None
         self._session: ClientSession | None = None
 
-    async def __aenter__(self) -> SageMCPClient:
+    # Quoted self-reference: on Python < 3.14 (e.g. the 3.12 Docker base image)
+    # annotations are evaluated eagerly at class-body execution, so an unquoted
+    # `-> SageMCPClient` here raises NameError before the class is defined.
+    async def __aenter__(self) -> "SageMCPClient":
         self._cm = streamable_http_client(self._url)
         read_stream, write_stream = await self._cm.__aenter__()
         self._session = ClientSession(read_stream, write_stream)

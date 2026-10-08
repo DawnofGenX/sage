@@ -11,7 +11,7 @@ Sage is a passive sales intelligence layer that sits on top of your existing CRM
 - **Passive Listening** — No wake words, no commands. Just have the conversation.
 - **Auto-Extraction** — Contacts, deals, follow-ups, sentiment, buying signals extracted automatically.
 - **Proactive Insights** — "You haven't followed up with Acme in 20 days."
-- **CRM Sync** — Bidirectional sync with Salesforce, HubSpot, Pipedrive via MCP.
+- **CRM Sync** — One-way sync (Sage → CRM) with Salesforce, HubSpot, Pipedrive via MCP.
 - **Visual Pipeline** — Deal boards, stuck-deal alerts, sentiment trends on Echo Show.
 
 ## Quick Start
@@ -43,7 +43,8 @@ cd mcp-server
 
 The `pip install -e .` step is not optional. The suite imports `from tools.crud
 import ...`, so `src/` must be installed as a package; with dependencies alone
-you get 13 collection errors (`No module named 'tools'`) and zero tests run.
+you get collection errors (`No module named 'tools'`) and zero tests run — see
+the verified 18-error negative case in [docs/test-report.md](docs/test-report.md).
 
 ## MCP Tools
 
@@ -65,6 +66,13 @@ you get 13 collection errors (`No module named 'tools'`) and zero tests run.
 | `get_weekly_review` | Weekly performance summary |
 | `search_contacts` | Fuzzy search |
 | `sync_to_crm` | Sync to external CRM |
+| `get_company_context` | Company-wide contacts, deals, health |
+| `get_activities` | Activity stream for a contact or deal |
+| `get_deal_history` | Stage-change history for a deal |
+| `create_task` | Create a task |
+| `enrich_contact` | Enrich a contact with context |
+| `get_forecast` | Weekly/monthly deal forecast |
+| `run_agentic_loop` | Transcript → 5-step chained tool run over SSE |
 
 ## Architecture
 
