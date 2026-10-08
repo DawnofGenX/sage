@@ -59,7 +59,7 @@ async def extract_from_call(transcript: str, audio_url: str | None = None) -> Ex
                 if estimated_duration > 0:
                     transcript = f"[Duration: ~{estimated_duration}s] {transcript}"
 
-    return await pipeline.process(transcript)
+    return ExtractionResult.model_validate(await pipeline.process(transcript))
 
 
 def _extract_s3_key(audio_url: str) -> str | None:
@@ -112,13 +112,21 @@ async def get_contact_context(
         include_deals: Whether to include associated deals.
 
     Returns:
-        A dictionary with contact, deals, and activities.
+        A dictionary with contact, deals, history, and activities.
+
+        `history` and `activities` carry the same call/activity records. The
+        schema declares both because that is what a consumer of this tool has
+        always read (the field was required while the tool returned only
+        `activities`, so every call failed validation once the return stopped
+        being a bare dict). Both are emitted so neither reader breaks.
     """
     db = _get_db()
     contacts = db.search_contacts(name)
 
     if not contacts:
-        return {"contact": None, "deals": [], "activities": []}
+        return ContactContext.model_validate(
+            {"contact": None, "deals": [], "history": [], "activities": []}
+        )
 
     contact = contacts[0]
     contact_id = contact["id"]
@@ -132,11 +140,14 @@ async def get_contact_context(
     if include_history:
         activities = db.get_contact_activities(contact_id)
 
-    return {
-        "contact": contact,
-        "deals": deals,
-        "activities": activities,
-    }
+    return ContactContext.model_validate(
+        {
+            "contact": contact,
+            "deals": deals,
+            "history": activities,
+            "activities": activities,
+        }
+    )
 
 
 async def get_pipeline_health(
@@ -189,4 +200,4 @@ async def get_pipeline_health(
             sentiments[s] = sentiments.get(s, 0) + 1
         result["sentiments"] = sentiments
 
-    return result
+    return PipelineHealth.model_validate(result)

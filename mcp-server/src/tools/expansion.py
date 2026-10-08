@@ -67,13 +67,15 @@ async def get_company_context(company_name: str) -> CompanyContext:
         else:
             health = "fair"
 
-    return {
-        "company": company_name,
-        "contacts": company_contacts,
-        "deals": deals,
-        "total_value": total_value,
-        "health": health,
-    }
+    return CompanyContext.model_validate(
+        {
+            "company": company_name,
+            "contacts": company_contacts,
+            "deals": deals,
+            "total_value": total_value,
+            "health": health,
+        }
+    )
 
 
 async def get_activities(contact_id: int = None, deal_id: int = None) -> ActivitiesResponse:
@@ -89,10 +91,12 @@ async def get_activities(contact_id: int = None, deal_id: int = None) -> Activit
     db = _get_db()
     activities = db.get_activities(contact_id=contact_id, deal_id=deal_id)
 
-    return {
-        "activities": activities,
-        "total": len(activities),
-    }
+    return ActivitiesResponse.model_validate(
+        {
+            "activities": activities,
+            "total": len(activities),
+        }
+    )
 
 
 async def get_deal_history(deal_id: int) -> DealHistory:
@@ -114,12 +118,14 @@ async def get_deal_history(deal_id: int) -> DealHistory:
     interactions = db.get_deal_interactions(deal_id)
     timeline = db.get_deal_timeline(deal_id)
 
-    return {
-        "deal": deal,
-        "stage_history": stage_history,
-        "interactions": interactions,
-        "timeline": timeline,
-    }
+    return DealHistory.model_validate(
+        {
+            "deal": deal,
+            "stage_history": stage_history,
+            "interactions": interactions,
+            "timeline": timeline,
+        }
+    )
 
 
 async def create_task(
@@ -153,7 +159,9 @@ async def create_task(
     # Annotated -> CreatedRecord so FastMCP publishes a typed output schema;
     # a plain dict is returned at runtime so dict-style callers keep working.
     # This mirrors create_contact/create_deal in crud.py.
-    return {"id": task_id, "title": title, "created": True}
+    return CreatedRecord.model_validate(
+        {"id": task_id, "title": title, "created": True}
+    )
 
 
 async def enrich_contact(contact_id: int) -> EnrichmentResponse:
@@ -200,11 +208,13 @@ async def enrich_contact(contact_id: int) -> EnrichmentResponse:
         if enrichment_result["companies"]:
             data["detected_companies"] = enrichment_result["companies"]
 
-    return {
-        "contact": contact,
-        "enriched": True,
-        "data": data,
-    }
+    return EnrichmentResponse.model_validate(
+        {
+            "contact": contact,
+            "enriched": True,
+            "data": data,
+        }
+    )
 
 
 async def get_forecast(timeframe: str = "month") -> ForecastResponse:
@@ -275,11 +285,13 @@ async def get_forecast(timeframe: str = "month") -> ForecastResponse:
     timeframe_multiplier = {"month": 1.0, "quarter": 3.0, "year": 12.0}
     multiplier = timeframe_multiplier.get(timeframe, 1.0)
 
-    return {
-        "forecast": forecast_items,
-        "total_pipeline": total_pipeline,
-        "weighted_forecast": weighted_forecast * multiplier,
-        "best_case": best_case * multiplier,
-        "worst_case": worst_case * multiplier,
-        "confidence": confidence,
-    }
+    return ForecastResponse.model_validate(
+        {
+            "forecast": forecast_items,
+            "total_pipeline": total_pipeline,
+            "weighted_forecast": weighted_forecast * multiplier,
+            "best_case": best_case * multiplier,
+            "worst_case": worst_case * multiplier,
+            "confidence": confidence,
+        }
+    )

@@ -36,7 +36,20 @@ async def get_deal_insights(deal_id: int) -> DealInsights:
 
     deal = db.get_deal(deal_id)
     if not deal:
-        return {"error": "Deal not found"}
+        # Schema-valid rather than a bare dict: DealInsights requires
+        # deal_id/sentiment/risks/buying_signals/recommendation, so returning
+        # {"error": ...} alone would fail validation against the published
+        # output_schema. The `error` extra still carries the reason.
+        return DealInsights.model_validate(
+            {
+                "deal_id": deal_id,
+                "sentiment": "unknown",
+                "risks": [f"Deal {deal_id} not found"],
+                "buying_signals": [],
+                "recommendation": "Verify the deal id; nothing to analyse.",
+                "error": "Deal not found",
+            }
+        )
 
     # Get related call logs for context
     all_calls = db.get_call_logs()
@@ -51,9 +64,13 @@ async def get_deal_insights(deal_id: int) -> DealInsights:
     insights_result = await provider.extract(context, "insights")
 
     # Determine sentiment from deal or calls
-    sentiment = deal.get("sentiment", "neutral")
-    if not sentiment and deal_calls:
-        sentiment = deal_calls[0].get("sentiment", "neutral")
+    # "or" not just a fallback here: the DB column is nullable, and the schema
+    # declares sentiment as a required str. An explicit None would fail
+    # validation against the published output_schema, so a genuinely absent
+    # sentiment must resolve to a real value.
+    sentiment = deal.get("sentiment") or "neutral"
+    if sentiment == "neutral" and deal_calls:
+        sentiment = deal_calls[0].get("sentiment") or "neutral"
 
     # Extract risks and buying signals from call logs
     risks = []
@@ -79,14 +96,16 @@ async def get_deal_insights(deal_id: int) -> DealInsights:
     else:
         recommendation = "Early stage. Continue qualification and build relationship."
 
-    return {
-        "deal_id": deal_id,
-        "sentiment": sentiment,
-        "risks": risks,
-        "buying_signals": buying_signals,
-        "recommendation": recommendation,
-        "insights": insights_result.get("insights", []),
-    }
+    return DealInsights.model_validate(
+        {
+            "deal_id": deal_id,
+            "sentiment": sentiment,
+            "risks": risks,
+            "buying_signals": buying_signals,
+            "recommendation": recommendation,
+            "insights": insights_result.get("insights", []),
+        }
+    )
 
 
 async def get_daily_briefing() -> DailyBriefing:
@@ -121,13 +140,15 @@ async def get_daily_briefing() -> DailyBriefing:
     if not insights:
         insights.append("Pipeline is healthy. Focus on new outreach.")
 
-    return {
-        "followups_due": followups_due,
-        "total_deals": len(deals),
-        "pipeline_value": total_value,
-        "stuck_deals": stuck_deals,
-        "insights": insights,
-    }
+    return DailyBriefing.model_validate(
+        {
+            "followups_due": followups_due,
+            "total_deals": len(deals),
+            "pipeline_value": total_value,
+            "stuck_deals": stuck_deals,
+            "insights": insights,
+        }
+    )
 
 
 async def get_todays_followups() -> FollowupsResponse:
@@ -165,10 +186,12 @@ async def get_todays_followups() -> FollowupsResponse:
     priority_order = {"high": 0, "medium": 1, "low": 2}
     prioritized.sort(key=lambda x: priority_order.get(x.get("priority", "medium"), 1))
 
-    return {
-        "followups": prioritized,
-        "total": len(prioritized),
-    }
+    return FollowupsResponse.model_validate(
+        {
+            "followups": prioritized,
+            "total": len(prioritized),
+        }
+    )
 
 
 async def get_weekly_review() -> WeeklyReview:
@@ -213,17 +236,19 @@ async def get_weekly_review() -> WeeklyReview:
 
     weekly_summary = ". ".join(summary_parts) if summary_parts else "No activity recorded this week."
 
-    return {
-        "deals_moved": deals_by_stage,
-        "calls_made": len(calls),
-        "followups_completed": len(completed_followups),
-        "pipeline_health": {
-            "total_deals": len(deals),
-            "pipeline_value": pipeline_value,
-            "deals_by_stage": deals_by_stage,
-        },
-        "weekly_summary": weekly_summary,
-    }
+    return WeeklyReview.model_validate(
+        {
+            "deals_moved": deals_by_stage,
+            "calls_made": len(calls),
+            "followups_completed": len(completed_followups),
+            "pipeline_health": {
+                "total_deals": len(deals),
+                "pipeline_value": pipeline_value,
+                "deals_by_stage": deals_by_stage,
+            },
+            "weekly_summary": weekly_summary,
+        }
+    )
 
 
 async def search_contacts(query: str) -> SearchResponse:
@@ -238,7 +263,9 @@ async def search_contacts(query: str) -> SearchResponse:
     db = _get_db()
     contacts = db.search_contacts(query)
 
-    return {
-        "contacts": contacts,
-        "total": len(contacts),
-    }
+    return SearchResponse.model_validate(
+        {
+            "contacts": contacts,
+            "total": len(contacts),
+        }
+    )

@@ -4,6 +4,14 @@ FastMCP publishes these models as JSON Schema so MCP clients get typed
 output. Each model groups by the module that owns the tool. Record models
 use ``model_config = ConfigDict(extra="allow")`` so an added field never
 breaks a consumer.
+
+Every model inherits ``_DictAccessMixin``, which makes a result readable as
+``result["status"]`` / ``.get("id")`` / ``"k" in result``. Tool results are
+consumed that way across the codebase and in every test that asserts on
+output shape, while the *declared* return type must be the model — a bare
+dict returned against a model annotation is what produced the
+PydanticSerializationUnexpectedValue warnings. Both constraints hold at once
+only because the models carry dict access.
 """
 
 from typing import Any
@@ -16,12 +24,69 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 
 
-class ProvenanceMixin(BaseModel):
+class _DictAccessMixin(BaseModel):
+    """Makes a model readable the way callers already read tool results.
+
+    Tool results are consumed as dicts throughout the codebase —``result["status"]``,
+    ``.get("id")``, ``step.get("result", {})`` — and by tests that assert on
+    those shapes. Returning a bare dict satisfied that but left the declared
+    ``-> SyncResult`` annotation a lie, which is why every call emitted a
+    PydanticSerializationUnexpectedValue warning inside FastMCP's
+    ``convert_result`` (fastmcp/tools/base.py:88 dumps the return against the
+    *declared* type).
+
+    Returning the model satisfies the annotation and is warning-free — verified
+    byte-identical JSON — but breaks ``result["key"]``. This mixin keeps both:
+    model typing for the declared schema, dict access for the call sites.
+
+    Read-only deliberately. Tool results are outputs; nothing in the codebase
+    mutates one after the fact, and allowing ``result["k"] = v`` would create a
+    second, silent way for the declared schema and the payload to disagree.
+    """
+
+    def __getitem__(self, key: str) -> Any:
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            # Pydantic puts unknown keys here when extra="allow"; raising
+            # KeyError rather than AttributeError keeps dict semantics honest.
+            extras = self.model_extra or {}
+            if key in extras:
+                return extras[key]
+            raise KeyError(key) from None
+
+    def get(self, key: str, default: Any = None) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __contains__(self, key: object) -> bool:
+        """Mirror ``model_dump(exclude_unset=True)``, not the declared fields.
+
+        Reporting a declared-but-unset field as present makes
+        ``"error" in successful_sync`` True while the serialized payload carries
+        no such key — the exact ambiguity the SyncResult contract exists to
+        avoid (friction log entry 10: `error` was once declared required and
+        broke every successful sync). Membership therefore tracks what the
+        serializer would emit.
+        """
+        if not isinstance(key, str):
+            return False
+        if key in type(self).model_fields:
+            return key in self.model_fields_set or key in (self.model_extra or {})
+        return key in (self.model_extra or {})
+
+
+class ProvenanceMixin(_DictAccessMixin):
     """Mixin that adds a provenance field to any tool response.
 
     Provenance tells the consumer exactly what produced the value — a real
     external system, a mock fallback, or nothing at all. See
     ``src/provenance.py`` for the full vocabulary.
+
+    Also inherits dict access from ``_DictAccessMixin`` so a tool can declare
+    ``-> SomeModel`` and callers can still subscript the result.
     """
 
     model_config = ConfigDict(extra="allow")
@@ -78,7 +143,7 @@ class ExtractionResult(ProvenanceMixin):
     )
 
 
-class ContactContext(BaseModel):
+class ContactContext(_DictAccessMixin):
     """Output of ``get_contact_context`` — full context for a contact."""
 
     model_config = ConfigDict(extra="allow")
@@ -97,7 +162,7 @@ class ContactContext(BaseModel):
     )
 
 
-class PipelineHealth(BaseModel):
+class PipelineHealth(_DictAccessMixin):
     """Output of ``get_pipeline_health`` — pipeline metrics."""
 
     model_config = ConfigDict(extra="allow")
@@ -125,7 +190,7 @@ class PipelineHealth(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class CreatedRecord(BaseModel):
+class CreatedRecord(_DictAccessMixin):
     """Output of create_contact, create_deal, create_task, log_call, schedule_followup."""
 
     model_config = ConfigDict(extra="allow")
@@ -134,7 +199,7 @@ class CreatedRecord(BaseModel):
     created: bool = Field(..., description="Always True on success.")
 
 
-class UpdatedRecord(BaseModel):
+class UpdatedRecord(_DictAccessMixin):
     """Output of update_contact, update_deal_stage, schedule_followup."""
 
     model_config = ConfigDict(extra="allow")
@@ -143,7 +208,7 @@ class UpdatedRecord(BaseModel):
     updated: bool = Field(..., description="Always True on success.")
 
 
-class EmailDraft(BaseModel):
+class EmailDraft(_DictAccessMixin):
     """Output of ``draft_followup_email`` — LLM-generated or templated email."""
 
     model_config = ConfigDict(extra="allow")
@@ -165,7 +230,7 @@ class EmailDraft(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class DailyBriefing(BaseModel):
+class DailyBriefing(_DictAccessMixin):
     """Output of ``get_daily_briefing`` — key metrics and action items."""
 
     model_config = ConfigDict(extra="allow")
@@ -180,7 +245,7 @@ class DailyBriefing(BaseModel):
     insights: list[str] = Field(..., description="Human-readable insights.")
 
 
-class FollowupsResponse(BaseModel):
+class FollowupsResponse(_DictAccessMixin):
     """Output of ``get_todays_followups`` — prioritized follow-ups."""
 
     model_config = ConfigDict(extra="allow")
@@ -189,7 +254,7 @@ class FollowupsResponse(BaseModel):
     total: int = Field(..., description="Total number of follow-ups.")
 
 
-class WeeklyReview(BaseModel):
+class WeeklyReview(_DictAccessMixin):
     """Output of ``get_weekly_review`` — weekly sales activity summary."""
 
     model_config = ConfigDict(extra="allow")
@@ -207,7 +272,7 @@ class WeeklyReview(BaseModel):
     )
 
 
-class SearchResponse(BaseModel):
+class SearchResponse(_DictAccessMixin):
     """Output of ``search_contacts`` — contact search results."""
 
     model_config = ConfigDict(extra="allow")
@@ -216,7 +281,7 @@ class SearchResponse(BaseModel):
     total: int = Field(..., description="Total number of matches.")
 
 
-class DealInsights(BaseModel):
+class DealInsights(_DictAccessMixin):
     """Output of ``get_deal_insights`` — AI-powered deal analysis."""
 
     model_config = ConfigDict(extra="allow")
@@ -278,7 +343,7 @@ class SyncResult(ProvenanceMixin):
 # ---------------------------------------------------------------------------
 
 
-class GenericRecord(BaseModel):
+class GenericRecord(_DictAccessMixin):
     """Fallback output model for expansion tools whose shape is not yet fixed.
 
     NOTE: an empty model with extra="allow" generates NO `properties`, so a
@@ -292,7 +357,7 @@ class GenericRecord(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class CompanyContext(BaseModel):
+class CompanyContext(_DictAccessMixin):
     """Output of get_company_context."""
 
     model_config = ConfigDict(extra="allow")
@@ -303,7 +368,7 @@ class CompanyContext(BaseModel):
     health: str | None = None
 
 
-class ActivitiesResponse(BaseModel):
+class ActivitiesResponse(_DictAccessMixin):
     """Output of get_activities."""
 
     model_config = ConfigDict(extra="allow")
@@ -311,7 +376,7 @@ class ActivitiesResponse(BaseModel):
     total: int = 0
 
 
-class DealHistory(BaseModel):
+class DealHistory(_DictAccessMixin):
     """Output of get_deal_history."""
 
     model_config = ConfigDict(extra="allow")
@@ -321,7 +386,7 @@ class DealHistory(BaseModel):
     timeline: list[dict[str, Any]] = []
 
 
-class EnrichmentResponse(BaseModel):
+class EnrichmentResponse(_DictAccessMixin):
     """Output of enrich_contact."""
 
     model_config = ConfigDict(extra="allow")
@@ -330,7 +395,7 @@ class EnrichmentResponse(BaseModel):
     data: dict[str, Any] = {}
 
 
-class ForecastResponse(BaseModel):
+class ForecastResponse(_DictAccessMixin):
     """Output of get_forecast."""
 
     model_config = ConfigDict(extra="allow")

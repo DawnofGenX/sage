@@ -45,7 +45,22 @@ async def create_contact(
         "notes": notes,
     }
     contact_id = db.create_contact(data)
-    return {"id": contact_id, "name": name, "created": True}
+    return CreatedRecord.model_validate(
+        {"id": contact_id, "name": name, "created": True}
+    )
+
+
+def _updated_record(record: dict) -> UpdatedRecord:
+    """Wrap an updated record's dict in the declared model.
+
+    update_contact / update_deal_stage are annotated `-> UpdatedRecord` but
+    returned the raw dict fetched from the DB, so FastMCP serialized a dict
+    against a model schema and warned on every call. `id` and `updated` are
+    filled in for the caller if the fetched row lacks them.
+    """
+    payload = dict(record or {})
+    payload.setdefault("updated", True)
+    return UpdatedRecord.model_validate(payload)
 
 
 async def update_contact(
@@ -82,7 +97,7 @@ async def update_contact(
     }.items() if v is not None}
     db.update_contact(contact_id, updates)
     contact = db.get_contact(contact_id)
-    return contact
+    return _updated_record(contact)
 
 
 async def create_deal(
@@ -113,7 +128,9 @@ async def create_deal(
         "notes": notes,
     }
     deal_id = db.create_deal(data)
-    return {"id": deal_id, "title": title, "created": True}
+    return CreatedRecord.model_validate(
+        {"id": deal_id, "title": title, "created": True}
+    )
 
 
 async def update_deal_stage(deal_id: int, stage: str) -> UpdatedRecord:
@@ -129,7 +146,7 @@ async def update_deal_stage(deal_id: int, stage: str) -> UpdatedRecord:
     db = _get_db()
     db.update_deal_stage(deal_id, stage)
     deal = db.get_deal(deal_id)
-    return deal
+    return _updated_record(deal)
 
 
 async def schedule_followup(
@@ -163,7 +180,9 @@ async def schedule_followup(
         "notes": notes,
     }
     followup_id = db.create_followup(data)
-    return {"id": followup_id, "title": title, "created": True}
+    return CreatedRecord.model_validate(
+        {"id": followup_id, "title": title, "created": True}
+    )
 
 
 async def draft_followup_email(
@@ -209,21 +228,25 @@ async def draft_followup_email(
             f"Looking forward to hearing from you.\n\n"
             f"Best regards"
         )
-        return {
+        return EmailDraft.model_validate(
+            {
+                "subject": subject,
+                "body": body,
+                "tone_used": tone,
+                "provenance": provenance if provenance != "mock" else "mock",
+                "templated": True,
+            }
+        )
+
+    return EmailDraft.model_validate(
+        {
             "subject": subject,
             "body": body,
-            "tone_used": tone,
-            "provenance": provenance if provenance != "mock" else "mock",
-            "templated": True,
+            "tone_used": result.get("tone_used", tone),
+            "provenance": provenance,
+            "templated": False,
         }
-
-    return {
-        "subject": subject,
-        "body": body,
-        "tone_used": result.get("tone_used", tone),
-        "provenance": provenance,
-        "templated": False,
-    }
+    )
 
 
 async def log_call(
@@ -254,4 +277,4 @@ async def log_call(
         "duration_seconds": duration_seconds,
     }
     call_id = db.log_call(data)
-    return {"id": call_id, "created": True}
+    return CreatedRecord.model_validate({"id": call_id, "created": True})

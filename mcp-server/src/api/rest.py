@@ -133,6 +133,19 @@ async def call_tool(tool_name: str, request: dict[str, Any]):
     tool_fn = TOOLS[tool_name]
     try:
         result = await tool_fn(**request)
+        # Serialize through the model's own dump, not FastAPI's model encoder.
+        # FastAPI emits every declared field — including optional `error` as an
+        # explicit null — whereas the model omits fields it was never given.
+        # SyncResult declares `error` optional precisely so the success path
+        # carries no error key at all (friction log entry 10: it was once
+        # declared required and that broke every successful sync).
+        if hasattr(result, "model_dump"):
+            # exclude_unset, NOT exclude_none. `record_id` is explicitly None on
+            # the not_configured path and must stay present (test_api asserts it
+            # is None); `error` is simply never provided on success and so is
+            # dropped. exclude_none would strip both and lose a field a caller
+            # is entitled to see as null.
+            return result.model_dump(exclude_unset=True)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
