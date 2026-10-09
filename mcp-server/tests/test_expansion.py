@@ -101,16 +101,26 @@ async def test_get_activities():
 
     # Get all activities
     result = await expansion.get_activities()
-    assert result["total"] == 3
-    assert len(result["activities"]) == 3
+    # Not == 3: create_contact and create_deal now record activities of their
+    # own (the event layer), so the total includes those rows. What this test
+    # owns is the three it inserted — assert those are present rather than an
+    # exact total that any future writer would break.
+    kinds = {a["type"] for a in result["activities"]}
+    assert {"call", "email", "meeting"} <= kinds, kinds
 
     # Filter by contact
     result = await expansion.get_activities(contact_id=contact["id"])
-    assert result["total"] == 3
+    types = [a["type"] for a in result["activities"]]
+    assert types.count("call") == 1
+    assert types.count("email") == 1
+    assert types.count("meeting") == 1
 
     # Filter by deal
     result = await expansion.get_activities(deal_id=deal["id"])
-    assert result["total"] == 3
+    deal_types = [a["type"] for a in result["activities"]]
+    assert deal_types.count("call") == 1
+    assert deal_types.count("email") == 1
+    assert deal_types.count("meeting") == 1
 
     # Filter by non-existent contact
     result = await expansion.get_activities(contact_id=9999)

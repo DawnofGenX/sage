@@ -6,22 +6,110 @@ deal got flagged, and a stalled negotiation-stage deal could look fine.
 With stage_history and activities written, elapsed silence is measurable.
 """
 import os
+import sqlite3
 import tempfile
 from datetime import datetime, timedelta
 
 import pytest
 
-_tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-_tmp.close()
-os.environ["SAGE_DB_PATH"] = _tmp.name
+# IMPORTANT: do NOT assign os.environ["SAGE_DB_PATH"] here.
+#
+# The suite already appoints one session-wide temp DB (test_api.py and
+# test_expansion.py both do it at import, and test_expansion's autouse fixture
+# deletes and recreates THAT file between tests). Rebinding the env var from a
+# later-imported module silently points every other module at a different file:
+# their resets miss our rows and our fixtures miss theirs. Import order is
+# alphabetical, so a module named test_activity_layer.py runs before test_api.py
+# and would win the assignment.
+#
+# Instead, resolve the path read-only and let the fixture own the file.
+#
+# The tool modules (tools.crud, tools.expansion) resolve the DB lazily through
+# tools/common._get_db(), which caches a singleton built from the env var. Tests
+# that call those tools must therefore reset that cache; the fixtures below do.
+#
+# This module owns no path. The session DB belongs to test_api.py, which the
+# suite imports anyway; importing its binding makes the dependency explicit
+# rather than a race on alphabetical import order. Four modules each trying to
+# appoint the session DB is exactly how test_expansion.py ended up resetting a
+# file nobody was writing to (it asserts an exact activity count and saw 12
+# rows from these modules).
+from test_api import _tmp_db_file as _session_db  # noqa: E402
+
+_tmp_path = _session_db.name
+os.environ["SAGE_DB_PATH"] = _tmp_path
 
 from data.db import Database  # noqa: E402
 
 
 @pytest.fixture
 def db():
-    database = Database(db_path=_tmp.name)
+    """A Database on the session path, with tool-module caches cleared.
+
+    Tools resolve their DB lazily through tools.common._get_db(), which caches a
+    singleton keyed to the env var. Without clearing it, a tool called in one
+    test keeps the previous test's connection and sees stale rows (or a deleted
+    file). Reset before AND after: the module-level caches are what the existing
+    suite's reset_modules() also targets.
+
+    The path is re-resolved per test rather than captured at import:
+    test_api.py and test_expansion.py delete and recreate the session file
+    between tests, so a bound path can point at an unlinked inode — the tool
+    writes land in the new file while this fixture reads the old one.
+    """
+    _reset_tool_caches()
+    path = os.environ["SAGE_DB_PATH"]
+    database = Database(db_path=path)
     yield database
+    _reset_tool_caches()
+
+
+def _reset_tool_caches() -> None:
+    """Clear the lazy singletons the tool modules hold."""
+    import tools.common as common
+    import tools.crud as crud
+    import tools.expansion as expansion
+    import tools.intelligence as intelligence
+
+    common._db = None
+    crud._db = None
+    expansion._db = None
+    intelligence._db = None
+
+@pytest.fixture(autouse=True)
+def _clean_event_tables():
+    """Clear the history tables before and after each test in this module.
+
+    These modules share the session DB with the rest of the suite (see the
+    SAGE_DB_PATH note at the top). Rows written here survive into later modules,
+    and tests that count activities — ours and test_expansion's — then see a
+    total that depends on which module ran first. Clearing before AND after
+    keeps each test's input deterministic in either direction.
+    """
+    _clear_tables()
+    yield
+    _clear_tables()
+
+
+def _clear_tables() -> None:
+    """Delete history rows, tolerating a database that is not created yet.
+
+    Connecting to a missing path creates an empty file with no tables, so the
+    DELETE raises. That happens on the first run before any test has built the
+    schema — skip rather than fail.
+    """
+    if not os.path.exists(_tmp_path):
+        return
+    conn = sqlite3.connect(_tmp_path)
+    try:
+        for table in ("stage_history", "activities"):
+            conn.execute(f"DELETE FROM {table}")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # tables not created yet
+    finally:
+        conn.close()
+
 
 
 def _engine(db):

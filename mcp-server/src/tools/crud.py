@@ -50,16 +50,26 @@ async def create_contact(
     )
 
 
-def _updated_record(record: dict) -> UpdatedRecord:
+def _updated_record(
+    record: dict | None, contact_id: int | None = None
+) -> UpdatedRecord:
     """Wrap an updated record's dict in the declared model.
 
     update_contact / update_deal_stage are annotated `-> UpdatedRecord` but
     returned the raw dict fetched from the DB, so FastMCP serialized a dict
-    against a model schema and warned on every call. `id` and `updated` are
-    filled in for the caller if the fetched row lacks them.
+    against a model schema and warned on every call.
+
+    `id` comes from the caller when the fetched row lacks it. A DB row always
+    has `id`, but a fetch that returns None (unknown id) or a row assembled
+    from the request would leave it missing, and `UpdatedRecord.id` is
+    required — an update that reports no id is unreportable.
     """
     payload = dict(record or {})
     payload.setdefault("updated", True)
+    if payload.get("id") is None:
+        payload["id"] = contact_id
+    if payload.get("id") is None:
+        raise ValueError("cannot build UpdatedRecord without an id")
     return UpdatedRecord.model_validate(payload)
 
 
@@ -103,7 +113,7 @@ async def update_contact(
         description=f"Contact {contact_id} updated",
         source="local",
     )
-    return _updated_record(contact)
+    return _updated_record(contact, contact_id)
 
 
 async def create_deal(
@@ -159,7 +169,9 @@ async def update_deal_stage(deal_id: int, stage: str) -> UpdatedRecord:
     db = _get_db()
     db.update_deal_stage(deal_id, stage)
     deal = db.get_deal(deal_id)
-    return _updated_record(deal)
+    if deal is None:
+        raise ValueError(f"deal {deal_id} not found after update")
+    return _updated_record(deal, deal_id)
 
 
 async def schedule_followup(

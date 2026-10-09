@@ -32,7 +32,7 @@ Python, TypeScript, React, MCP (Model Context Protocol), Streamable HTTP, Amazon
 Sage is an MCP server that sits on top of your existing CRM. It listens to sales calls passively (no wake words, no commands), extracts structured data using Amazon Nova, proactively surfaces insights you might miss, and syncs everything to Salesforce, HubSpot, or Pipedrive.
 
 🧠 WHAT IS MCP?
-Model Context Protocol (MCP) is an open standard for connecting AI models to external tools and data sources. Sage exposes 23 MCP tools for CRM operations, extraction, and intelligence.
+Model Context Protocol (MCP) is an open standard for connecting AI models to external tools and data sources. Sage exposes 24 MCP tools for CRM operations, extraction, and intelligence.
 
 📊 KEY FEATURES
 • Passive listening — no wake words, no commands
@@ -40,7 +40,7 @@ Model Context Protocol (MCP) is an open standard for connecting AI models to ext
 • Proactive insights — "You haven't followed up with Acme in 20 days"
 • CRM sync — one-way sync to Salesforce, HubSpot, Pipedrive, or local SQLite
 • Visual pipeline — deal boards, stuck-deal alerts, sentiment trends on Echo Show
-• 23 MCP tools — full agentic loop: listen → extract → reason → act → sync
+• 24 MCP tools — full agentic loop: listen → extract → reason → act → sync
 
 #hackathon #alexa #mcp #sales #ai #amazon #alexaplus #nova #bedrock #crm #voice
 ```

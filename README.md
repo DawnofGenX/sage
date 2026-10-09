@@ -69,6 +69,7 @@ the verified 18-error negative case in [docs/test-report.md](docs/test-report.md
 | `get_company_context` | Company-wide contacts, deals, health |
 | `get_activities` | Activity stream for a contact or deal |
 | `get_deal_history` | Stage-change history for a deal |
+| `get_deal_timeline_events` | Merged stage-change + activity stream, oldest first |
 | `create_task` | Create a task |
 | `enrich_contact` | Enrich a contact with context |
 | `get_forecast` | Weekly/monthly deal forecast |

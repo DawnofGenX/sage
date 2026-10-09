@@ -6,7 +6,7 @@
 
 ## 1. Code Complete & Tested
 
-- [ ] All 23 MCP tools implemented and working
+- [ ] All 24 MCP tools implemented and working
 - [ ] All 298 tests passing (`pytest` in `mcp-server/`)
 - [ ] Web simulator builds without errors (`npm run build`)
 - [ ] Web simulator runs without console errors
