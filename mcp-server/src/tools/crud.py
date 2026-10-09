@@ -97,6 +97,12 @@ async def update_contact(
     }.items() if v is not None}
     db.update_contact(contact_id, updates)
     contact = db.get_contact(contact_id)
+    db.record_activity(
+        contact_id=contact_id,
+        type="contact_updated",
+        description=f"Contact {contact_id} updated",
+        source="local",
+    )
     return _updated_record(contact)
 
 
@@ -128,6 +134,13 @@ async def create_deal(
         "notes": notes,
     }
     deal_id = db.create_deal(data)
+    db.record_activity(
+        contact_id=contact_id,
+        deal_id=deal_id,
+        type="deal_created",
+        description=f"Deal created: {title}",
+        source="local",
+    )
     return CreatedRecord.model_validate(
         {"id": deal_id, "title": title, "created": True}
     )
@@ -180,6 +193,13 @@ async def schedule_followup(
         "notes": notes,
     }
     followup_id = db.create_followup(data)
+    db.record_activity(
+        contact_id=contact_id,
+        deal_id=deal_id,
+        type="followup_scheduled",
+        description=f"Follow-up scheduled: {title}",
+        source="local",
+    )
     return CreatedRecord.model_validate(
         {"id": followup_id, "title": title, "created": True}
     )
