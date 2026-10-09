@@ -48,3 +48,23 @@ def test_record_stage_change_records_source(db, deal):
     db.record_stage_change(deal, "lead", "qualified", source="salesforce")
     rows = db.get_stage_history(deal)
     assert rows[0]["source"] == "salesforce"
+
+
+def test_stage_history_has_source_and_meta_columns(db, deal):
+    """Existing databases must gain the columns without a manual migration."""
+    cols = {
+        r[1]
+        for r in db._get_conn().execute("PRAGMA table_info(stage_history)").fetchall()
+    }
+    assert {"source", "meta"} <= cols, f"missing columns: {cols}"
+
+
+def test_existing_db_gains_columns(db):
+    """CREATE TABLE IF NOT EXISTS must not silently skip an ALTER on old DBs."""
+    db._get_conn().execute("DROP TABLE stage_history")
+    db._init_schema()  # recreate from schema.sql
+    cols = {
+        r[1]
+        for r in db._get_conn().execute("PRAGMA table_info(stage_history)").fetchall()
+    }
+    assert "source" in cols

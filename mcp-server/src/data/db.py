@@ -59,6 +59,15 @@ class Database:
         ):
             if column not in existing:
                 conn.execute(ddl)
+
+        # Same for activities: the event layer writes `source` there too.
+        existing_activities = {
+            row[1] for row in conn.execute("PRAGMA table_info(activities)").fetchall()
+        }
+        if "source" not in existing_activities:
+            conn.execute(
+                "ALTER TABLE activities ADD COLUMN source TEXT DEFAULT 'local'"
+            )
         conn.commit()
 
     def create_contact(self, data: dict) -> int:
@@ -157,6 +166,12 @@ class Database:
             from_stage = deal["stage"]
             if from_stage != stage:
                 self.record_stage_change(deal_id, from_stage, stage, source="local")
+                self.record_activity(
+                    deal_id=deal_id,
+                    type="stage_change",
+                    description=f"{from_stage} -> {stage}",
+                    source="local",
+                )
         return updated
 
     def record_stage_change(
@@ -179,6 +194,37 @@ class Database:
         conn.close()
         if row_id is None:
             raise RuntimeError("INSERT into stage_history produced no row id")
+        return row_id
+
+    def record_activity(
+        self,
+        type: str,
+        description: str,
+        contact_id: int | None = None,
+        deal_id: int | None = None,
+        source: str = "local",
+    ) -> int:
+        """Append an activity row.
+
+        Append-only, like stage_history. The `activities` table was read-only
+        schema until the event layer landed: get_activities queried a table
+        nothing ever wrote to, so it returned [] unconditionally.
+
+        `type` shadows the builtin deliberately — it matches the column name and
+        the vocabulary the frontend already renders, and a `type_` parameter
+        would be a second name for the same thing.
+        """
+        conn = self._get_conn()
+        cursor = conn.execute(
+            """INSERT INTO activities (contact_id, deal_id, type, description, source)
+               VALUES (?, ?, ?, ?, ?)""",
+            (contact_id, deal_id, type, description, source),
+        )
+        conn.commit()
+        row_id = cursor.lastrowid
+        conn.close()
+        if row_id is None:
+            raise RuntimeError("INSERT into activities produced no row id")
         return row_id
 
     def get_followups_due(self) -> list:
