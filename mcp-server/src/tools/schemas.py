@@ -386,6 +386,25 @@ class DealHistory(_DictAccessMixin):
     timeline: list[dict[str, Any]] = []
 
 
+class TimelineEvent(_DictAccessMixin):
+    """One entry in a deal's merged event stream."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str = Field(..., description="'stage_change' or 'activity'.")
+    timestamp: str = Field(..., description="When the event was recorded.")
+    data: dict[str, Any] = Field(default_factory=dict, description="Full source row.")
+
+
+class TimelineResponse(_DictAccessMixin):
+    """Output of get_deal_timeline_events."""
+
+    model_config = ConfigDict(extra="allow")
+
+    events: list[TimelineEvent] = Field(default_factory=list)
+    count: int = Field(0, description="Number of events returned.")
+
+
 class EnrichmentResponse(_DictAccessMixin):
     """Output of enrich_contact."""
 

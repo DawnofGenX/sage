@@ -10,6 +10,7 @@ from tools.schemas import (
     DealHistory,
     EnrichmentResponse,
     ForecastResponse,
+    TimelineResponse,
 )
 
 _provider = None
@@ -125,6 +126,52 @@ async def get_deal_history(deal_id: int) -> DealHistory:
             "interactions": interactions,
             "timeline": timeline,
         }
+    )
+
+
+async def get_deal_timeline_events(deal_id: int) -> TimelineResponse:
+    """Get a deal's merged event stream: stage changes and activities in order.
+
+    Read-only view over the rows written by the event layer. stage_history and
+    activities are append-only, so this ordering is durable history rather than
+    a reconstruction from current state.
+
+    Distinct from get_deal_history, which returns the three views separately:
+    this returns one normalised, ordered stream with the source row attached,
+    which is what a client rendering a timeline actually wants.
+
+    Args:
+        deal_id: The deal ID whose events to return.
+
+    Returns:
+        A dictionary with an ordered events list and its count.
+    """
+    db = _get_db()
+
+    events = []
+    for row in db.get_stage_history(deal_id):
+        events.append(
+            {
+                "type": "stage_change",
+                "timestamp": row.get("changed_at"),
+                "data": row,
+            }
+        )
+    for row in db.get_activities(deal_id=deal_id):
+        events.append(
+            {
+                "type": "activity",
+                "timestamp": row.get("created_at"),
+                "data": row,
+            }
+        )
+
+    # Oldest first: a timeline read bottom-to-top is the wrong way round.
+    # Empty timestamps sort first rather than raising.
+    events.sort(key=lambda e: e.get("timestamp") or "")
+
+    return TimelineResponse.model_validate(
+        {"events": events, "count": len(events)}
     )
 
 
