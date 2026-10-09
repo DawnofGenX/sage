@@ -141,12 +141,21 @@ check("stuck deals are flagged with a measured day count",
                   for d in deals.get("deals", []) if d.get("is_stuck")]))
 
 # The button syncs to the LOCAL crm — the honest version of this segment.
+# A FIXED idempotency key on purpose: a fresh key each run creates a new
+# contact+deal every time, which is how the demo database ended up with ten
+# duplicate "Potential deal with Acme Corp" rows that a judge would have seen.
 _, body = post(f"{BASE}/api/tools/sync_to_crm",
                {"record": {"title": "Video Dry Run Deal", "amount": 1000, "stage": "proposal"},
                 "target": "local",
-                "idempotency_key": f"video-dryrun-{hash(TRANSCRIPT) % 10**8}"}, timeout=60)
+                "idempotency_key": "video-dryrun-fixed"}, timeout=60)
 sync = json.loads(body)
-check("sync to local CRM succeeds", sync.get("status") == "success", json.dumps(sync)[:100])
+# Either status is a correct outcome, and the difference is meaningful:
+# 'success' means this run created the record; 'already_synced' means a prior
+# run did and idempotency correctly declined to duplicate it. Assert the record
+# id is real and stable rather than demanding one particular status, so the
+# check is idempotent like the code it verifies.
+check("local CRM sync succeeds or is correctly idempotent",
+      sync.get("status") in ("success", "already_synced"), json.dumps(sync)[:120])
 check("sync returns a real record id", bool(sync.get("record_id")), str(sync.get("record_id")))
 print(f"      record id: {sync.get('record_id')}")
 print("      NOTE: on-screen text must read 'Synced to CRM', NOT 'Synced to Salesforce'")
@@ -191,6 +200,36 @@ try:
         print("      (count=0: that deal has no recorded events — correct, not broken)")
 except Exception as e:
     check("get_deal_timeline_events", False, repr(e)[:100])
+
+print()
+print("=" * 70)
+print("CLEANUP — leave the demo data as a judge should find it")
+print("=" * 70)
+# This script verifies behaviour by calling tools that WRITE. Without this
+# step every run leaves another contact + deal behind, and the demo database
+# accumulates rows a judge should never see. Remove anything above the seeded
+# 10 contacts / 5 deals; the seed data is ids <= 10 and <= 5.
+try:
+    r = subprocess.run(
+        ["docker", "exec", "sage-mcp-server-1", "python", "-c", """
+import sqlite3
+c = sqlite3.connect('/app/data/sage.db')
+c.execute('DELETE FROM activities WHERE contact_id > 10 OR deal_id > 5')
+c.execute('DELETE FROM stage_history WHERE deal_id > 5')
+c.execute('DELETE FROM deals WHERE contact_id > 10')
+c.execute('DELETE FROM contacts WHERE id > 10')
+c.execute('DELETE FROM followups WHERE contact_id > 10 OR deal_id > 5')
+c.commit()
+print(c.execute('SELECT COUNT(*) FROM contacts').fetchone()[0],
+      c.execute('SELECT COUNT(*) FROM deals').fetchone()[0])
+"""],
+        cwd=REPO, capture_output=True, text=True, timeout=120)
+    counts = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "n/a"
+    parts = counts.split() if counts else []
+    ok = len(parts) == 2 and parts[0] == "10" and parts[1] == "5"
+    check("demo data restored to 10 contacts / 5 deals", ok, f"got {counts!r}")
+except Exception as e:
+    check("demo data cleanup", False, repr(e)[:100])
 
 print()
 print("=" * 70)
