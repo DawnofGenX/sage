@@ -78,21 +78,49 @@ class ProactiveEngine:
         return alerts
 
     def _check_stuck_deals(self) -> list:
-        """Check for deals with no activity in 14+ days."""
+        """Check for deals with no recorded activity in 14+ days.
+
+        Previously this flagged every deal whose *stage name* was 'lead' or
+        'negotiation', which misreported in both directions: an actively-worked
+        early-stage deal was flagged, and a stalled negotiation-stage deal could
+        look fine. With stage_history and activities now written, elapsed
+        silence is measured from the last recorded event.
+        """
         deals = self.db.get_all_deals()
         now = datetime.now()
         alerts = []
         for d in deals:
-            updated_at = d.get("updated_at")
-            if updated_at:
-                updated = self._parse_date(updated_at)
-                if updated:
-                    days_inactive = (now - updated).days
-                    if days_inactive >= 14:
-                        alerts.append(
-                            f"Stuck deal: {d['title']} (no activity for {days_inactive} days)"
-                        )
+            last_event = self._last_activity_time(d["id"])
+            if last_event is None:
+                # No history at all: fall back to the deal's own timestamp,
+                # and say so rather than inventing an activity date.
+                last_event = self._parse_date(d.get("updated_at"))
+                if last_event is None:
+                    continue
+            days_inactive = (now - last_event).days
+            if days_inactive >= 14:
+                alerts.append(
+                    f"Stuck deal: {d['title']} (no activity for {days_inactive} days)"
+                )
         return alerts
+
+    def _last_activity_time(self, deal_id: int) -> datetime | None:
+        """Most recent recorded event for a deal, from stage_history and activities.
+
+        Returns None when no events are recorded, so the caller can fall back to
+        the deal's own timestamp and say which it used rather than implying a
+        precision it does not have.
+        """
+        latest = None
+        for row in self.db.get_stage_history(deal_id):
+            stamp = self._parse_date(row.get("changed_at"))
+            if stamp and (latest is None or stamp > latest):
+                latest = stamp
+        for row in self.db.get_activities(deal_id=deal_id):
+            stamp = self._parse_date(row.get("created_at"))
+            if stamp and (latest is None or stamp > latest):
+                latest = stamp
+        return latest
 
     def _check_budget_deadlines(self) -> list:
         """Check for deals with budget/deadline mentions in notes."""
