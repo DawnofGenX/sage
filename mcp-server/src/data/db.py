@@ -39,7 +39,27 @@ class Database:
             schema = f.read()
         conn = self._get_conn()
         conn.executescript(schema)
+        self._migrate(conn)
         conn.close()
+
+    def _migrate(self, conn: sqlite3.Connection) -> None:
+        """Add columns introduced after a database was first created.
+
+        CREATE TABLE IF NOT EXISTS never alters an existing table, so a database
+        written before `source`/`meta` existed would keep the old shape forever
+        and every INSERT naming them would fail. Adding each column only when it
+        is missing keeps this idempotent and safe on every boot.
+        """
+        existing = {
+            row[1] for row in conn.execute("PRAGMA table_info(stage_history)").fetchall()
+        }
+        for column, ddl in (
+            ("source", "ALTER TABLE stage_history ADD COLUMN source TEXT DEFAULT 'local'"),
+            ("meta", "ALTER TABLE stage_history ADD COLUMN meta TEXT"),
+        ):
+            if column not in existing:
+                conn.execute(ddl)
+        conn.commit()
 
     def create_contact(self, data: dict) -> int:
         conn = self._get_conn()
@@ -120,6 +140,9 @@ class Database:
 
     def update_deal_stage(self, deal_id: int, stage: str) -> bool:
         conn = self._get_conn()
+        deal = conn.execute(
+            "SELECT stage FROM deals WHERE id = ?", (deal_id,)
+        ).fetchone()
         cursor = conn.execute(
             "UPDATE deals SET stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (stage, deal_id),
@@ -127,7 +150,36 @@ class Database:
         conn.commit()
         updated = cursor.rowcount > 0
         conn.close()
+
+        # The audit row is written here rather than in the tool: the tool calls
+        # this method, so recording here covers both entry points.
+        if updated and deal is not None:
+            from_stage = deal["stage"]
+            if from_stage != stage:
+                self.record_stage_change(deal_id, from_stage, stage, source="local")
         return updated
+
+    def record_stage_change(
+        self, deal_id: int, from_stage: str, to_stage: str, source: str = "local"
+    ) -> int:
+        """Append a stage transition to stage_history.
+
+        Append-only. Nothing updates or deletes these rows: a history that can
+        be edited is not a history, and this project's whole thesis is that the
+        record should be trustworthy.
+        """
+        conn = self._get_conn()
+        cursor = conn.execute(
+            """INSERT INTO stage_history (deal_id, from_stage, to_stage, changed_at, source)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)""",
+            (deal_id, from_stage, to_stage, source),
+        )
+        conn.commit()
+        row_id = cursor.lastrowid
+        conn.close()
+        if row_id is None:
+            raise RuntimeError("INSERT into stage_history produced no row id")
+        return row_id
 
     def get_followups_due(self) -> list:
         conn = self._get_conn()

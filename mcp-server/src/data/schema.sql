@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS stage_history (
     from_stage TEXT,
     to_stage TEXT,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    source TEXT DEFAULT 'local',
+    meta TEXT,
     FOREIGN KEY (deal_id) REFERENCES deals(id)
 );
 
