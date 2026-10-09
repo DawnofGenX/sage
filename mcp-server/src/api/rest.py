@@ -6,32 +6,7 @@ from typing import Any
 
 from server import mcp
 
-from tools.extraction import extract_from_call, get_contact_context, get_pipeline_health
-from tools.crud import (
-    create_contact,
-    update_contact,
-    create_deal,
-    update_deal_stage,
-    schedule_followup,
-    draft_followup_email,
-    log_call,
-)
-from tools.intelligence import (
-    get_deal_insights,
-    get_daily_briefing,
-    get_todays_followups,
-    get_weekly_review,
-    search_contacts,
-)
-from tools.sync import sync_to_crm
-from tools.expansion import (
-    get_company_context,
-    get_activities,
-    get_deal_history,
-    create_task,
-    enrich_contact,
-    get_forecast,
-)
+from tools.registry import ALL_TOOLS
 
 mcp_app = mcp.http_app()
 app = FastAPI(
@@ -48,30 +23,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TOOLS = {
-    "extract_from_call": extract_from_call,
-    "get_contact_context": get_contact_context,
-    "get_pipeline_health": get_pipeline_health,
-    "create_contact": create_contact,
-    "update_contact": update_contact,
-    "create_deal": create_deal,
-    "update_deal_stage": update_deal_stage,
-    "schedule_followup": schedule_followup,
-    "draft_followup_email": draft_followup_email,
-    "log_call": log_call,
-    "get_deal_insights": get_deal_insights,
-    "get_daily_briefing": get_daily_briefing,
-    "get_todays_followups": get_todays_followups,
-    "get_weekly_review": get_weekly_review,
-    "search_contacts": search_contacts,
-    "sync_to_crm": sync_to_crm,
-    "get_company_context": get_company_context,
-    "get_activities": get_activities,
-    "get_deal_history": get_deal_history,
-    "create_task": create_task,
-    "enrich_contact": enrich_contact,
-    "get_forecast": get_forecast,
-}
+# Derived from ALL_TOOLS, NEVER hand-maintained.
+#
+# This used to be a literal dict of 22 imports, and it silently drifted: the
+# registry gained tools the dict never heard about, so /api/tools/{name} 404'd
+# for them while the MCP surface served them fine. run_agentic_loop,
+# get_deal_timeline_events and get_deals were all unreachable over REST that way
+# — which is exactly how the pipeline board ended up showing hardcoded sample
+# deals: it could not ask for the real ones.
+#
+# Deriving the map from the single registry makes drift impossible. A tool added
+# to ALL_TOOLS is callable over REST and MCP alike, or it fails a test.
+TOOLS = {fn.__name__: fn for fn in ALL_TOOLS}
 
 
 @app.get("/api/health")

@@ -24,7 +24,7 @@ Sage is a passive sales intelligence layer built as an MCP server (spec 2025-11-
 - **Syncs** to Salesforce, HubSpot, Pipedrive, or a local SQLite-backed CRM via MCP — never fabricates success when credentials are missing
 - **Visualizes** pipeline health on Echo Show with deal boards, stuck-deal alerts, and sentiment trends
 
-The MCP server exposes 24 tools with typed output schemas, including `extract_from_call`, `get_pipeline_health`, `get_contact_context`, `draft_followup_email`, and `sync_to_crm`. A web simulator demonstrates the full experience for judges who don't have Alexa+ hardware.
+The MCP server exposes 25 tools with typed output schemas, including `extract_from_call`, `get_pipeline_health`, `get_contact_context`, `draft_followup_email`, and `sync_to_crm`. A web simulator demonstrates the full experience for judges who don't have Alexa+ hardware.
 
 ### How I Built It
 

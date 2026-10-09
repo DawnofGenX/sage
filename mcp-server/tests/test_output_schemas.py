@@ -19,7 +19,7 @@ async def test_all_tools_are_registered():
     from tools.registry import ALL_TOOLS
 
     tools = await mcp.list_tools()
-    assert len(tools) == len(ALL_TOOLS) == 24
+    assert len(tools) == len(ALL_TOOLS) == 25
 
 
 @pytest.mark.asyncio

@@ -68,14 +68,6 @@ const INITIAL_TRACE_STEPS: TraceStep[] = [
   { id: 7, title: 'Write to database', description: 'Persist extracted records', status: 'pending' },
 ]
 
-const SAMPLE_DEALS: BoardDeal[] = [
-  { id: 1, title: 'Acme Enterprise License', value: 50000, stage: 'proposal', contactName: 'Sarah Chen', sentiment: 'positive' },
-  { id: 2, title: 'Globex Platform Deal', value: 120000, stage: 'negotiation', contactName: 'Mike Johnson', sentiment: 'neutral', isStuck: true },
-  { id: 3, title: 'Initech Team Plan', value: 25000, stage: 'lead', contactName: 'Jennifer Williams', sentiment: 'positive' },
-  { id: 4, title: 'Stark Custom Deployment', value: 200000, stage: 'closed_won', contactName: 'David Stark', sentiment: 'positive' },
-  { id: 5, title: 'Wayne Enterprise Rollout', value: 75000, stage: 'lead', contactName: 'Lisa Wayne', sentiment: 'positive' },
-]
-
 const SAMPLE_CONTACTS: Contact[] = [
   { id: 1, name: 'Sarah Chen', company: 'Acme Corp', email: 'sarah@acme.com', phone: '+1-555-0100', title: 'VP of Engineering', notes: '', created_at: '2024-01-15' },
   { id: 2, name: 'Mike Johnson', company: 'Globex', email: 'mike@globex.com', phone: '+1-555-0101', title: 'CTO', notes: '', created_at: '2024-01-20' },
@@ -172,7 +164,8 @@ export default function App() {
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
 
   // Pipeline board state
-  const [deals, setDeals] = useState<BoardDeal[]>(SAMPLE_DEALS)
+  const [deals, setDeals] = useState<BoardDeal[]>([])
+  const [dealsError, setDealsError] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncComplete, setSyncComplete] = useState(false)
 
@@ -234,6 +227,34 @@ export default function App() {
     let cancelled = false
 
     async function loadDashboard() {
+      // Load the real pipeline. The board used to seed from hardcoded
+      // SAMPLE_DEALS and never call the API, so it showed five invented deals
+      // while the CRM sat behind the same server. Start empty and fill from
+      // get_deals; on failure the board shows the error rather than fake data.
+      try {
+        const dealsResp = await api.getDeals()
+        if (!cancelled) {
+          const live = (dealsResp.deals || []).map((d: Record<string, unknown>) => ({
+            id: Number(d.id),
+            title: String(d.title ?? ''),
+            value: Number(d.value ?? 0),
+            stage: String(d.stage ?? 'lead'),
+            contactName: String(d.contact_name ?? ''),
+            sentiment: (d.sentiment as string | null) ?? undefined,
+            isStuck: Boolean(d.is_stuck),
+            daysInactive: d.days_inactive == null ? undefined : Number(d.days_inactive),
+          }))
+          setDeals(live)
+          setDealsError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setDealsError(
+            err instanceof Error ? err.message : 'Failed to load deals from the API'
+          )
+        }
+      }
+
       // Load pipeline health
       try {
         await api.getPipelineHealth()
@@ -689,6 +710,7 @@ export default function App() {
                 deals={deals}
                 isSyncing={isSyncing}
                 onSync={handleSync}
+                loadError={dealsError}
               />
 
               {/* Sync Complete Toast */}

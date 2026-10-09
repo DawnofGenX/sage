@@ -12,7 +12,7 @@ from tools.intelligence import (
 from tools.sync import sync_to_crm
 from tools.expansion import (
     get_company_context, get_activities, get_deal_history,
-    get_deal_timeline_events, create_task, enrich_contact, get_forecast,
+    get_deal_timeline_events, get_deals, create_task, enrich_contact, get_forecast,
 )
 
 ALL_TOOLS = [
@@ -23,6 +23,6 @@ ALL_TOOLS = [
     get_weekly_review, search_contacts,
     sync_to_crm,
     get_company_context, get_activities, get_deal_history,
-    get_deal_timeline_events, create_task, enrich_contact, get_forecast,
+    get_deal_timeline_events, get_deals, create_task, enrich_contact, get_forecast,
     run_agentic_loop,
 ]

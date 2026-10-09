@@ -8,12 +8,17 @@ export interface BoardDeal {
   contactName: string
   sentiment?: string
   isStuck?: boolean
+  /** Days since the deal's last recorded event — the measurement behind isStuck. */
+  daysInactive?: number
 }
 
 interface PipelineBoardProps {
   deals: BoardDeal[]
   isSyncing: boolean
   onSync: () => void
+  /** Set when the live fetch failed. Shown instead of an empty board so a
+   *  broken backend is visible rather than looking like an empty pipeline. */
+  loadError?: string | null
 }
 
 const STAGES = [
@@ -36,7 +41,7 @@ function DealCard({ deal }: { deal: BoardDeal }) {
         <h4 className="text-sm font-medium text-white leading-tight">{deal.title}</h4>
         {deal.isStuck && (
           <span className="flex-shrink-0 ml-2 px-1.5 py-0.5 text-xs bg-red-500/20 text-red-400 rounded">
-            Stuck
+            Stuck{typeof deal.daysInactive === 'number' ? ` ${deal.daysInactive}d` : ''}
           </span>
         )}
       </div>
@@ -55,7 +60,7 @@ function DealCard({ deal }: { deal: BoardDeal }) {
   )
 }
 
-export default function PipelineBoard({ deals, isSyncing, onSync }: PipelineBoardProps) {
+export default function PipelineBoard({ deals, isSyncing, onSync, loadError }: PipelineBoardProps) {
   const [hoveredStage, setHoveredStage] = useState<string | null>(null)
 
   const totalValue = deals.reduce((sum, d) => sum + d.value, 0)
@@ -90,6 +95,23 @@ export default function PipelineBoard({ deals, isSyncing, onSync }: PipelineBoar
           )}
         </button>
       </div>
+
+      {/* A failed load is stated, not hidden: an empty board and a broken
+          board look identical otherwise, and only one of them is a bug. */}
+      {loadError && (
+        <div className="mb-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+          <p className="text-xs text-red-400">
+            Could not load deals from the server: {loadError}
+          </p>
+        </div>
+      )}
+      {!loadError && deals.length === 0 && (
+        <div className="mb-3 bg-alexa-dark/40 border border-alexa-accent/20 rounded-lg p-3">
+          <p className="text-xs text-gray-500">
+            No deals yet. Extract one from a call transcript to see it here.
+          </p>
+        </div>
+      )}
 
       {/* Kanban Columns */}
       <div className="grid grid-cols-5 gap-3 min-h-[200px]">

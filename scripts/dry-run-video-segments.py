@@ -50,7 +50,7 @@ check("GET /api/health -> ok", json.loads(body).get("status") == "ok", body[:50]
 
 _, body = get(f"{BASE}/api/tools")
 d = json.loads(body)
-check("24 tools advertised", d["count"] == 24, f"count={d['count']}")
+check("25 tools advertised", d["count"] == 25, f"count={d['count']}")
 
 _, body = get(WEB)
 check("web simulator serves HTML", "<html" in body.lower())
@@ -127,6 +127,19 @@ print()
 print("=" * 70)
 print("SEGMENT 5 — CRM Sync: 'Sync to CRM' button")
 print("=" * 70)
+_, body = post(f"{BASE}/api/tools/get_deals", {})
+deals = json.loads(body)
+check("board data comes from the live API (not hardcoded samples)",
+      deals.get("total", 0) > 0, f"deals={deals.get('total')}")
+check("each deal carries a contact name for the board card",
+      all(d.get("contact_name") for d in deals.get("deals", [])),
+      json.dumps(deals.get("deals", [{}])[0].get("contact_name")))
+check("stuck deals are flagged with a measured day count",
+      any(d.get("is_stuck") and d.get("days_inactive") is not None
+          for d in deals.get("deals", [])),
+      json.dumps([{ "t": d["title"], "d": d.get("days_inactive")}
+                  for d in deals.get("deals", []) if d.get("is_stuck")]))
+
 # The button syncs to the LOCAL crm — the honest version of this segment.
 _, body = post(f"{BASE}/api/tools/sync_to_crm",
                {"record": {"title": "Video Dry Run Deal", "amount": 1000, "stage": "proposal"},

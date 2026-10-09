@@ -64,11 +64,11 @@ def server_url():
 
 
 @pytest.mark.asyncio
-async def test_list_tools_returns_24_tools(server_url):
-    """list_tools returns all 24 tools from the real server."""
+async def test_list_tools_returns_25_tools(server_url):
+    """list_tools returns all 25 tools from the real server."""
     async with SageMCPClient(server_url) as client:
         tools = await client.list_tools()
-    assert len(tools) == 24
+    assert len(tools) == 25
     names = {t["name"] for t in tools}
     assert "get_pipeline_health" in names
     assert "create_contact" in names

@@ -171,6 +171,15 @@ export const api = {
   getDealInsights: (dealId: number) =>
     callTool('get_deal_insights', { deal_id: dealId }),
 
+  getDeals: (includeClosed?: boolean) =>
+    callTool('get_deals', { include_closed: includeClosed ?? true }),
+
+  getActivities: (contactId?: number, dealId?: number) =>
+    callTool('get_activities', { contact_id: contactId, deal_id: dealId }),
+
+  getDealTimelineEvents: (dealId: number) =>
+    callTool('get_deal_timeline_events', { deal_id: dealId }),
+
   syncToCrm: (record: Record<string, unknown>, target: string, idempotencyKey: string) =>
     callTool('sync_to_crm', { record, target, idempotency_key: idempotencyKey }),
 

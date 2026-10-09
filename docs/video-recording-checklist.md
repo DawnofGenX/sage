@@ -82,7 +82,7 @@ docker compose ps             # expect: both containers "Up"
 
 - [ ] Verify web simulator loads at `http://localhost:3000` (nginx serves it and proxies `/api`)
 - [ ] Verify API health: `curl http://localhost:8000/api/health` → `{"status":"ok","server":"sage","version":"1.0.0"}`
-- [ ] Verify 24 tools: `curl -s localhost:8000/api/tools | grep -o '"count":24'`
+- [ ] Verify 25 tools: `curl -s localhost:8000/api/tools | grep -o '"count":25'`
 - [ ] Confirm the database has demo data: `curl -s localhost:3000/api/health` then open the PipelineBoard — deals should be visible
 - [ ] **No manual seed step needed.** `entrypoint.sh` seeds on first boot; re-running it is a no-op (see its log line: `[entrypoint] seed: {"seeded": false, "reason": "database already has N contact(s)"}`)
 - [ ] Open simulator in Chrome at exactly 1920×1080

@@ -8,10 +8,114 @@ from tools.schemas import (
     CompanyContext,
     CreatedRecord,
     DealHistory,
+    DealsResponse,
     EnrichmentResponse,
     ForecastResponse,
     TimelineResponse,
 )
+
+
+async def get_deals(include_closed: bool = True) -> DealsResponse:
+    """Get every deal in the pipeline, ready to render on a board.
+
+    This closes a real API gap, not a convenience. The pipeline board used to
+    seed itself from hardcoded SAMPLE_DEALS because no tool listed deals:
+    get_pipeline_health returns aggregate counts plus *stuck* deals only, and
+    get_company_context works one company at a time. So the UI showed five
+    invented deals with invented sentiment while the real CRM sat behind the
+    same server.
+
+    `is_stuck` is measured from recorded history — stage_history and activities
+    — the same way the proactive engine measures it, so the board's badge and
+    the insight card agree.
+
+    Args:
+        include_closed: Whether to include closed_won/closed_lost deals.
+            Defaults True so the board shows the whole pipeline.
+
+    Returns:
+        A dictionary with deals, total, and total_value.
+    """
+    db = _get_db()
+    deals = db.get_all_deals()
+
+    contacts_by_id = {c["id"]: c.get("name", "") for c in db.get_all_contacts()}
+
+    rows = []
+    total_value = 0.0
+    for d in deals:
+        stage = d.get("stage") or "lead"
+        if not include_closed and stage.startswith("closed"):
+            continue
+
+        last_event = _last_event_time(db, d["id"])
+        days_inactive = None
+        if last_event is not None:
+            days_inactive = (datetime.now() - last_event).days
+
+        value = d.get("value")
+        if value:
+            try:
+                total_value += float(value)
+            except (TypeError, ValueError):
+                pass
+
+        rows.append(
+            {
+                "id": d["id"],
+                "title": d.get("title", ""),
+                "value": value,
+                "stage": stage,
+                "contact_id": d.get("contact_id"),
+                "contact_name": contacts_by_id.get(d.get("contact_id")),
+                "sentiment": d.get("sentiment"),
+                "is_stuck": days_inactive is not None and days_inactive >= 14,
+                "days_inactive": days_inactive,
+                "notes": d.get("notes"),
+            }
+        )
+
+    return DealsResponse.model_validate(
+        {"deals": rows, "total": len(rows), "total_value": total_value}
+    )
+
+
+def _last_event_time(db, deal_id: int):
+    """Most recent recorded event for a deal, or None if it has no history.
+
+    Duplicated from the proactive engine rather than imported so the tool has no
+    dependency on it: the engine owns the *insight* wording, this owns the
+    *measurement*, and both must stay capable of disagreeing if one is wrong.
+    """
+    latest = None
+    for row in db.get_stage_history(deal_id):
+        stamp = _parse_ts(row.get("changed_at"))
+        if stamp and (latest is None or stamp > latest):
+            latest = stamp
+    for row in db.get_activities(deal_id=deal_id):
+        stamp = _parse_ts(row.get("created_at"))
+        if stamp and (latest is None or stamp > latest):
+            latest = stamp
+    if latest is None:
+        # No recorded events: fall back to the deal's own timestamp so a deal
+        # that was just created is not reported as infinitely stale.
+        latest = _parse_ts(db.get_deal(deal_id).get("updated_at")) if db.get_deal(deal_id) else None
+    return latest
+
+
+def _parse_ts(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except (ValueError, TypeError):
+        pass
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(str(value), fmt)
+        except (ValueError, TypeError):
+            continue
+    return None
 
 _provider = None
 

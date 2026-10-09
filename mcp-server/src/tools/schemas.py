@@ -405,6 +405,38 @@ class TimelineResponse(_DictAccessMixin):
     count: int = Field(0, description="Number of events returned.")
 
 
+class DealListRow(_DictAccessMixin):
+    """One deal, shaped for a pipeline board.
+
+    `contact_name` is denormalised in rather than requiring the client to
+    resolve contact_id — the board renders it on every card, and a card with a
+    blank name is the failure mode this field exists to prevent.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    id: int = Field(..., description="Deal ID.")
+    title: str = Field("", description="Deal title.")
+    value: float | None = Field(None, description="Deal value in dollars.")
+    stage: str = Field("lead", description="Current stage.")
+    contact_id: int | None = Field(None)
+    contact_name: str | None = Field(None, description="Denormalised contact name.")
+    sentiment: str | None = Field(None)
+    is_stuck: bool = Field(False, description="Measured from recorded history.")
+    days_inactive: int | None = Field(None, description="Days since the last recorded event.")
+    notes: str | None = Field(None)
+
+
+class DealsResponse(_DictAccessMixin):
+    """Output of get_deals — every deal in the pipeline."""
+
+    model_config = ConfigDict(extra="allow")
+
+    deals: list[DealListRow] = Field(default_factory=list)
+    total: int = Field(0)
+    total_value: float = Field(0.0)
+
+
 class EnrichmentResponse(_DictAccessMixin):
     """Output of enrich_contact."""
 
