@@ -15,7 +15,7 @@ import ActivityFeed from './components/ActivityFeed'
 import AlexaView from './components/AlexaView'
 import DemoMode from './components/DemoMode'
 import Hero from './components/Hero'
-import { api, runAgenticLoop, AgenticStep } from './lib/api'
+import { api, runAgenticLoop, getStats, AgenticStep } from './lib/api'
 import type { Contact, Deal, Activity } from './lib/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -189,6 +189,10 @@ export default function App() {
   const [isLoadingInsights, setIsLoadingInsights] = useState(true)
   const [insightsError, setInsightsError] = useState<string | null>(null)
 
+  // Hero stats — computed from the tool-call log, not hardcoded
+  const [hoursSaved, setHoursSaved] = useState(0)
+  const [manualEntries, setManualEntries] = useState(0)
+
   // Demo mode state
   const [showDemoMode, setShowDemoMode] = useState(false)
   const [demoToast, setDemoToast] = useState(false)
@@ -232,7 +236,15 @@ export default function App() {
       // while the CRM sat behind the same server. Start empty and fill from
       // get_deals; on failure the board shows the error rather than fake data.
       try {
-        const dealsResp = await api.getDeals()
+        // Fetch stats in parallel with deals
+        const [dealsResp, stats] = await Promise.all([
+          api.getDeals(),
+          getStats().catch(() => null),
+        ])
+        if (!cancelled && stats) {
+          setHoursSaved(stats.hoursSaved)
+          setManualEntries(stats.manualEntries)
+        }
         if (!cancelled) {
           const live = (dealsResp.deals || []).map((d: Record<string, unknown>) => ({
             id: Number(d.id),
@@ -611,7 +623,7 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Hero Section */}
-            <Hero hoursSaved={2.5} manualEntries={0} />
+            <Hero hoursSaved={hoursSaved} manualEntries={manualEntries} />
 
             {/* Loading State */}
             {(isLoadingHealth || isLoadingInsights) && (

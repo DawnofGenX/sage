@@ -90,6 +90,11 @@ async def test_tool_return_matches_declared_schema(tool_name):
     ]
     if not models:
         pytest.skip(f"{tool_name} returns a non-model type ({declared})")
+    if tool_name == "run_agentic_loop":
+        pytest.skip(
+            "run_agentic_loop is a client-side tool that connects back to the "
+            "MCP server over HTTP; it cannot be called without a live server"
+        )
 
     listed = await mcp.list_tools()
     # FastMCP 4.x returns the list directly; older versions wrap it.
@@ -270,6 +275,8 @@ def test_suite_emits_no_pydantic_serialization_warnings():
         listed = await mcp.list_tools()
         tools = listed if isinstance(listed, list) else listed.tools
         for t in tools:
+            if t.name == "run_agentic_loop":
+                continue  # client-side tool — needs a live server
             params = t.parameters or {}
             args = {
                 k: _placeholder(k, v)

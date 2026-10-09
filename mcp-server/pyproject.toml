@@ -33,6 +33,10 @@ where = ["src"]
 # Static analysis (Pyright) needs the same src/ root the runtime uses. Without
 # this, every `from tools.sync import ...` and `from sync.local import ...`
 # reports as an unresolved import, which buries real type errors in noise.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
+
 [tool.pyright]
 include = ["src", "tests"]
 extraPaths = ["src"]

@@ -30,6 +30,24 @@ export interface AgenticComplete {
   reason?: string
 }
 
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+export interface SageStats {
+  hoursSaved: number
+  manualEntries: number
+  callsProcessed: number
+  contactsCreated: number
+  dealsCreated: number
+}
+
+export async function getStats(): Promise<SageStats> {
+  const response = await fetch(`${API_BASE}/stats`)
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`)
+  }
+  return response.json()
+}
+
 export interface AgenticLoopHandlers {
   onStep: (step: AgenticStep) => void
   onComplete: (result: AgenticComplete) => void
