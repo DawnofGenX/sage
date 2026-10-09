@@ -4,7 +4,27 @@ from typing import Optional
 
 
 class Database:
-    def __init__(self, db_path: str = "sage.db", use_dynamodb: bool | None = None):
+    def __init__(
+        self, db_path: str | None = None, use_dynamodb: bool | None = None
+    ):
+        # Resolve SAGE_DB_PATH here, once, for every construction site.
+        #
+        # It used to default to the bare string "sage.db" — a RELATIVE path, so
+        # it resolved against the process CWD. In the container that is /app,
+        # which is ephemeral filesystem, not the sage-data volume mounted at
+        # /app/data: every write was lost on recreate while the volume held only
+        # a 0-byte .gitkeep, and `docker compose down -v` reset nothing.
+        #
+        # It also silently ignored SAGE_DB_PATH: only tools/common.py read the
+        # env var, so src/data/seed.py and the server.py resource built a
+        # Database on a different file than every tool call. Setting
+        # SAGE_DB_PATH changed tool behaviour and nothing else.
+        #
+        # tools/common.py passes the env var explicitly today; that still works
+        # and stays harmless. db_path=None (not "sage.db") is what makes the
+        # default dynamic.
+        if db_path is None:
+            db_path = os.environ.get("SAGE_DB_PATH", "sage.db")
         self.db_path = db_path
 
         # DynamoDB integration: use when AWS credentials are available

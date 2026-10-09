@@ -22,6 +22,15 @@ RUN pip install --no-cache-dir -e . --no-deps
 # Seed so the container is demo-ready on first boot. The API creates the schema
 # on demand when this is skipped, but without seed data every demo surface is
 # empty.
+#
+# SAGE_DB_PATH matters more than it looks. Database() defaults to the relative
+# path "sage.db", which resolves against the WORKDIR (/app) — that is inside the
+# container's ephemeral filesystem, NOT the sage-data volume mounted at
+# /app/data. Every write was lost on recreate while the volume held only a
+# 0-byte .gitkeep, and `docker compose down -v` reset nothing.
+#
+# The seed below, and the server at runtime, must both point at the volume.
+ENV SAGE_DB_PATH=/app/data/sage.db
 RUN python -m src.data.seed || true
 
 ENV PYTHONUNBUFFERED=1

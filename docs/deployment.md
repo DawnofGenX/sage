@@ -86,11 +86,24 @@ docker compose down
 
 ### Persistent Data
 
-The SQLite database is stored in a Docker volume `sage-data`. The image also seeds demo data
-at build time, so a fresh container is never empty. To reset:
+The SQLite database lives on the `sage-data` volume, mounted at `/app/data`.
+
+The image also seeds demo data at build time, so a fresh container is never
+empty. On first use Docker copies the image's `/app/data` contents into a new
+named volume, so a brand-new deploy starts pre-seeded; a re-run of an existing
+volume keeps whatever the previous container wrote.
+
+**`SAGE_DB_PATH=/app/data/sage.db` is set in the Dockerfile and is
+load-bearing.** `Database()` resolves it as its default path. Without it the
+path falls back to the relative `"sage.db"`, which resolves against the
+container WORKDIR (`/app`) — ephemeral filesystem, not the volume. Every write
+was silently lost on recreate while `docker compose down -v` appeared to work,
+because the volume only ever held a 0-byte `.gitkeep`.
+
+To reset:
 
 ```bash
-docker compose down -v
+docker compose down -v      # removes the volume, so the next up re-seeds
 docker compose up --build
 ```
 
