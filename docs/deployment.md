@@ -88,10 +88,17 @@ docker compose down
 
 The SQLite database lives on the `sage-data` volume, mounted at `/app/data`.
 
-The image also seeds demo data at build time, so a fresh container is never
-empty. On first use Docker copies the image's `/app/data` contents into a new
-named volume, so a brand-new deploy starts pre-seeded; a re-run of an existing
-volume keeps whatever the previous container wrote.
+The container seeds itself on first boot instead of at image build. Build-time
+seeding cannot reach a volume that already exists — Docker only copies image
+contents into a named volume the first time it is created, so an existing
+volume's `/app/data` masks the image's copy and the built-in seed silently does
+nothing. `entrypoint.sh` therefore calls `ensure_seeded()` before uvicorn,
+against the database the container actually sees, and seeds only when that
+database is empty — an existing volume with real data is never overwritten.
+
+Because of this, upgrading an existing deployment no longer needs a manual
+`docker compose down -v`: the next `up` seeds the database if it is empty and
+leaves it alone otherwise.
 
 **`SAGE_DB_PATH=/app/data/sage.db` is set in the Dockerfile and is
 load-bearing.** `Database()` resolves it as its default path. Without it the

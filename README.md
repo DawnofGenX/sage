@@ -34,6 +34,8 @@ python3 -m venv .venv
 cd web-simulator && npm install && npm run dev
 ```
 
+The Docker path needs no manual seed — `entrypoint.sh` seeds on first boot.
+
 ### Running the tests
 
 ```bash

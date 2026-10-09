@@ -225,6 +225,19 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 
 ---
 
+## 18. Volume masked build-time seed
+
+| Field | Details |
+|-------|---------|
+| **Task** | Seed the demo database so the container is demo-ready |
+| **Expected** | `docker compose up` produces a container with contacts and deals |
+| **Actual** | The Dockerfile seeded at **build** time, which writes into the image layer. A named volume only receives image contents when first created, so an existing volume's `/app/data` (0-byte `.gitkeep`) masked the image's copy. Fresh volume: seeded. Existing volume: no tables, every demo surface empty. The `\|\| true` on the seed step hid the failure entirely. |
+| **Severity** | High |
+| **Fix** | `ensure_seeded(db)` in `src/data/seed.py` seeds only when the database is empty; `entrypoint.sh` calls it before uvicorn. Build-time seed removed from the Dockerfile. |
+| **Suggestion** | Never seed (or migrate) a database at image build time when the data lives on a volume mounted at runtime — build-time writes cannot see it. |
+
+---
+
 ## Summary
 
 | # | Issue | Severity | Status |
@@ -246,3 +259,4 @@ Issues encountered during MCP server development for the Amazon Developer Hackat
 | 15 | Docker image could not import the app | High | Fixed — `pip install -e .` in image |
 | 16 | Python 3.12 vs 3.14 self-referential annotation | High | Fixed — quoted annotation |
 | 17 | Docker frontend had no API route | High | Fixed — nginx `/api` proxy |
+| 18 | Volume masked build-time seed | High | Fixed — seed on first boot |
