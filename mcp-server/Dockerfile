@@ -19,21 +19,24 @@ COPY data/ ./data/
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir -e . --no-deps
 
-# Seed so the container is demo-ready on first boot. The API creates the schema
-# on demand when this is skipped, but without seed data every demo surface is
-# empty.
-#
-# SAGE_DB_PATH matters more than it looks. Database() defaults to the relative
-# path "sage.db", which resolves against the WORKDIR (/app) — that is inside the
-# container's ephemeral filesystem, NOT the sage-data volume mounted at
-# /app/data. Every write was lost on recreate while the volume held only a
-# 0-byte .gitkeep, and `docker compose down -v` reset nothing.
-#
-# The seed below, and the server at runtime, must both point at the volume.
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# SAGE_DB_PATH is load-bearing. Database() resolves it as its default path;
+# without it the path falls back to the relative "sage.db", which resolves
+# against the WORKDIR (/app) — ephemeral filesystem, not the sage-data volume
+# mounted at /app/data. Every write was lost on recreate while the volume held
+# only a 0-byte .gitkeep, and `docker compose down -v` reset nothing.
 ENV SAGE_DB_PATH=/app/data/sage.db
-RUN python -m src.data.seed || true
+
+# Seeding is deliberately NOT a build-time step. A build-time RUN writes into
+# the image layer, and a named volume only receives image contents the first
+# time it is created — so an existing volume's /app/data masks the image's copy
+# and the built-in seed silently does nothing. entrypoint.sh seeds at container
+# start, against the database the container actually sees, and only when that
+# database is empty.
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
-CMD ["python", "-m", "uvicorn", "src.api.rest:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/entrypoint.sh"]

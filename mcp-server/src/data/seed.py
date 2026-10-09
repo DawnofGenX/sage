@@ -82,6 +82,52 @@ def seed(db: Database) -> dict:
     }
 
 
+def ensure_seeded(db: Database) -> dict:
+    """Seed demo data only when the database is empty.
+
+    `seed()` is idempotent by title but still queries and inserts on every
+    call. `ensure_seeded` answers the container-start question directly: does
+    this database have anything in it? If yes, leave it alone — a volume with
+    real data must never be re-seeded or trimmed. If no, seed.
+
+    This exists because build-time seeding cannot reach a volume that already
+    exists: the volume's own /app/data masks the image's copy, so the built-in
+    seed silently does nothing on upgrade.
+
+    Args:
+        db: The Database to inspect and possibly seed.
+
+    Returns:
+        A dict with `seeded` (bool), `reason` (str), and the seed() counters
+        when seeding ran. Never raises on an unreadable database: a container
+        that cannot start because demo data is missing is worse than one that
+        starts empty and says so.
+    """
+    try:
+        existing = len(db.get_all_contacts())
+    except Exception as exc:  # noqa: BLE001 — missing tables, corrupt file, etc.
+        # No schema yet is the normal first-boot case, not an error worth
+        # failing startup over. Constructing the schema is Database's job; it
+        # runs in __init__, which has already happened by now.
+        return {
+            "seeded": False,
+            "reason": f"could not read contacts: {type(exc).__name__}: {exc}",
+        }
+
+    if existing:
+        return {
+            "seeded": False,
+            "reason": f"database already has {existing} contact(s)",
+        }
+
+    result = seed(db)
+    return {
+        "seeded": True,
+        "reason": "database was empty",
+        **result,
+    }
+
+
 def main():
     db = Database()
     result = seed(db)
