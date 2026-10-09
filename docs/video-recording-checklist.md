@@ -70,16 +70,40 @@ Create these scenes in the Scene Collection:
 - [ ] Clear browser cache and cookies
 - [ ] Set desktop wallpaper to solid color (clean background)
 
-### Application Setup
-- [ ] Start the MCP server: `cd mcp-server && python -m uvicorn src.api.rest:app --port 8000`
-- [ ] Start the web simulator: `cd web-simulator && npm run dev`
-- [ ] Verify simulator loads at `http://localhost:3000`
-- [ ] Verify API health: `curl http://localhost:8000/api/health` → `{"status":"ok"}`
-- [ ] Seed the database: `cd mcp-server && python -m src.data.seed`
+### Application Setup (Docker — recommended)
+
+The stack is containerised; use it rather than starting uvicorn by hand. A second uvicorn on :8000 will fail with "address already in use" and take your recording down with it.
+
+```bash
+cd /home/hermes/sage
+docker compose up -d          # starts both services; entrypoint seeds the DB
+docker compose ps             # expect: both containers "Up"
+```
+
+- [ ] Verify web simulator loads at `http://localhost:3000` (nginx serves it and proxies `/api`)
+- [ ] Verify API health: `curl http://localhost:8000/api/health` → `{"status":"ok","server":"sage","version":"1.0.0"}`
+- [ ] Verify 24 tools: `curl -s localhost:8000/api/tools | grep -o '"count":24'`
+- [ ] Confirm the database has demo data: `curl -s localhost:3000/api/health` then open the PipelineBoard — deals should be visible
+- [ ] **No manual seed step needed.** `entrypoint.sh` seeds on first boot; re-running it is a no-op (see its log line: `[entrypoint] seed: {"seeded": false, "reason": "database already has N contact(s)"}`)
 - [ ] Open simulator in Chrome at exactly 1920×1080
 - [ ] Set browser zoom to 100%
 - [ ] Hide bookmarks bar (Ctrl+Shift+B)
 - [ ] Use incognito/clean profile if possible
+
+### Application Setup (local, no Docker — only if Docker is unavailable)
+
+```bash
+cd /home/hermes/sage/mcp-server
+.venv/bin/pip install -r requirements.txt   # if not already installed
+.venv/bin/pip install -e .                  # required; src/ is the import root
+.venv/bin/python -m uvicorn src.api.rest:app --port 8000
+```
+```bash
+cd /home/hermes/sage/web-simulator
+npm install && npm run dev                  # serves on :3000, proxies /api -> :8000
+```
+
+**Verify this stack before recording** — if you skip `pip install -e .` the server exits immediately with `ModuleNotFoundError: No module named 'server'`.
 
 ### OBS Verification
 - [ ] Record 5-second test clip
@@ -117,8 +141,7 @@ Record each segment as a separate take. You can stop and restart between segment
 - [ ] Click "Load Sample Call" dropdown in header
 - [ ] Select a sample call (e.g., "Acme Enterprise License")
 - [ ] Show transcript populating in TranscriptView
-- [ ] Click "Start Listening" to show active mic state
-- [ ] Show live transcript appearing in real-time
+- [ ] Note the VoiceInput mic state — there is **no "Start Listening" button**; the mic indicator reflects the browser's SpeechRecognition API, which needs no click
 - [ ] Display text overlay: "No wake words. No commands."
 - [ ] Record voiceover: "Sage listens passively. No wake words, no commands. Just have the conversation."
 - [ ] Stop recording
@@ -135,8 +158,9 @@ Record each segment as a separate take. You can stop and restart between segment
   - [ ] Step 4: Schema Validation (running → complete)
 - [ ] Show ReasoningTrace panel with 7-step internal trace
 - [ ] Show extraction result with structured data
-- [ ] Display text overlay: "Amazon Nova via AWS Bedrock"
-- [ ] Record voiceover: "After the call, Sage extracts everything using Amazon Nova: contacts, deals, follow-ups, sentiment, buying signals."
+- [ ] Display text overlay: "Pluggable LLM provider"
+- [ ] Record voiceover: "After the call, Sage extracts everything through a pluggable LLM provider: contacts, deals, follow-ups, sentiment, buying signals."
+- [ ] **Do not claim Amazon Nova.** The recorded demo runs without credentials, so extraction uses the deterministic fallback. Nova via Bedrock is what a credential-configured deployment uses — the pluggability is the claim, not the vendor.
 - [ ] Stop recording
 - [ ] Save take as: `takes/segment-3-extraction.mp4`
 
@@ -162,6 +186,7 @@ Record each segment as a separate take. You can stop and restart between segment
 - [ ] Click "Sync to CRM" button
 - [ ] Show sync animation (spinner)
 - [ ] Show "Sync Complete" toast notification
+- [ ] Note the sync target on screen — it is Sage's **local** CRM, not Salesforce. Do not show "Synced to Salesforce ✓"; nothing was synced to Salesforce.
 - [ ] Switch to Alexa+ tab
 - [ ] Show AlexaView with morning briefing on Echo Show simulation
 - [ ] Switch to `EndCard` scene
@@ -188,10 +213,11 @@ Record each segment as a separate take. You can stop and restart between segment
 - [ ] Add text overlays (Fusion → Text+):
   - [ ] "2+ hours/day on data entry" — Segment 1
   - [ ] "No wake words. No commands." — Segment 2
-  - [ ] "Amazon Nova via AWS Bedrock" — Segment 3
+  - [ ] "Pluggable LLM provider" — Segment 3
   - [ ] "You haven't followed up with Acme in 20 days." — Segment 4
-  - [ ] "Synced to Salesforce ✓" — Segment 5
+  - [ ] "Synced to CRM ✓" — Segment 5
   - [ ] End card with repo URL
+  - [ ] Do **not** use "Amazon Nova via AWS Bedrock" or "Synced to Salesforce ✓" — neither is true of the recorded demo (see the Segment 3 and 5 notes)
 - [ ] Add voiceover on Audio Track 1
 - [ ] Add background music on Audio Track 2 (YouTube Audio Library)
 - [ ] Duck music to -20 dB under voiceover

@@ -43,21 +43,25 @@
 - **TranscriptView component:** Live transcript text appearing line by line
 - **Call timer:** Elapsed time counter in TranscriptView
 
-**Action:** Click "Load Sample Call" → select a sample → transcript populates → click "Start Listening" to show active state.
+**Action:** Click "Load Sample Call" → select a sample → transcript populates. The VoiceInput component's mic state is driven by the browser's SpeechRecognition API, so it only activates where that is available; with no mic there is no button to click — the transcript panel is the demo.
+
+**No "Start Listening" button exists in this UI.** The checklist's earlier instruction to click one was wrong. Show the mic state as-is, and let the transcript panel carry the segment.
 
 ---
 
 ## Segment 3: Auto-Extraction [0:25 – 0:40]
 
-**Visual:** The ExtractionPipeline component runs through all 4 stages (2 LLM passes + local validation). Each stage animates from "pending" → "running" → "complete" with checkmarks. The ReasoningTrace panel below shows the 7-step internal trace. Extraction runs through the pluggable LLM provider: Amazon Nova via AWS Bedrock when `LLM_API_KEY`/credentials are present, deterministic fallback otherwise — state which mode the demo is actually running in (the recorded demo used mock mode).
+**Visual:** The ExtractionPipeline component runs through all 4 stages (2 LLM passes + local validation). Each stage animates from "pending" → "running" → "complete" with checkmarks. The ReasoningTrace panel below shows the 7-step internal trace.
+
+**IMPORTANT — do not claim Amazon Nova on screen or in voiceover.** The demo runs the pluggable LLM provider's deterministic fallback by default. Amazon Nova via AWS Bedrock is what runs **when credentials are present**; the recorded demo has none, so it runs in mock mode. The provider is genuinely pluggable — that is the feature, and it is what the voiceover should convey.
 
 **On-screen text:**
 - "Extracting insights..."
-- "Amazon Nova via AWS Bedrock"
+- "Pluggable LLM provider — swap in Bedrock, Nova, or any OpenAI-compatible API"
 - Step labels: "Entity Extraction" → "Intent Classification" → "Record Generation" → "Schema Validation (local)"
 
 **Voiceover:**
-> "After the call, Sage extracts everything using Amazon Nova: contacts, deals, follow-ups, sentiment, buying signals."
+> "After the call, Sage extracts everything through a pluggable LLM provider: contacts, deals, follow-ups, sentiment, buying signals."
 
 **UI elements to reference:**
 - **ExtractionPipeline component:** 4 stages with animated progress (2 LLM passes + local validation)
@@ -98,13 +102,15 @@
 
 ## Segment 5: CRM Sync + Close [0:50 – 1:00]
 
-**Visual:** The PipelineBoard component shows a Kanban board with deals across stages. Click "Sync to CRM" → sync animation plays → "Sync Complete" toast appears. Then show the Alexa+ view with the morning briefing on an Echo Show simulation. End with the hero section and GitHub link.
+**Visual:** The PipelineBoard component shows a Kanban board with deals across stages. Click "Sync to CRM" → sync animation plays → "Sync Complete" toast appears. The sync target is Sage's **local** CRM — the demo runs without external credentials, and `sync_to_crm` reports `not_configured` for Salesforce/HubSpot/Pipedrive rather than pretending otherwise. Then show the Alexa+ view with the morning briefing on an Echo Show simulation. End with the hero section and GitHub link.
 
 **On-screen text:**
-- "Synced to Salesforce ✓"
+- "Synced to CRM ✓"
 - "Sage. Your CRM that listens."
 - "github.com/DawnofGenX/sage"
 - "Built for Amazon Developer Hackathon 2026"
+
+**Do not put "Synced to Salesforce ✓" on screen.** Nothing was synced to Salesforce. The honest version is the same beat with one fewer word, and the code's own behaviour backs it.
 
 **Voiceover:**
 > "Everything synced to your CRM automatically. Sage. Your CRM that listens."
@@ -134,7 +140,8 @@
 [0:10] Sage listens passively. No wake words, no commands.
         Just have the conversation.
 
-[0:25] After the call, Sage extracts everything using Amazon Nova:
+[0:25] After the call, Sage extracts everything
+        through a pluggable LLM provider:
         contacts, deals, follow-ups, sentiment, buying signals.
 
 [0:40] And Sage doesn't wait for you to ask.

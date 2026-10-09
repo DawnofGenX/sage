@@ -9,7 +9,7 @@ Sage — Your CRM that listens | Amazon Developer Hackathon 2026
 ## Video Description
 
 ```
-Sage is a passive sales intelligence layer that listens to your sales calls, extracts insights using Amazon Nova via AWS Bedrock, and proactively tells you what you're forgetting — all synced to your CRM via MCP.
+Sage is a passive sales intelligence layer that listens to your sales calls, extracts insights through a pluggable LLM provider (Amazon Nova via AWS Bedrock when credentials are present, deterministic fallback otherwise), and proactively tells you what you're forgetting — all synced to your CRM via MCP.
 
 Built for the Amazon Developer Hackathon 2026.
 
@@ -28,8 +28,10 @@ Hackathon: https://amazon.devpost.com
 🛠️ BUILT WITH
 Python, TypeScript, React, MCP (Model Context Protocol), Streamable HTTP, Amazon Nova, AWS Bedrock, Docker, MIT License
 
+Note on the demo: extraction runs through a pluggable LLM provider. Amazon Nova via AWS Bedrock is what runs when credentials are configured; the demo video records the deterministic fallback path that runs without them. The pluggability is the feature — the provider is a credential swap, not a code change.
+
 🤖 WHAT IS SAGE?
-Sage is an MCP server that sits on top of your existing CRM. It listens to sales calls passively (no wake words, no commands), extracts structured data using Amazon Nova, proactively surfaces insights you might miss, and syncs everything to Salesforce, HubSpot, or Pipedrive.
+Sage is an MCP server that sits on top of your existing CRM. It listens to sales calls passively (no wake words, no commands), extracts structured data using a two-pass LLM pipeline, proactively surfaces insights you might miss, and syncs everything to Salesforce, HubSpot, or Pipedrive.
 
 🧠 WHAT IS MCP?
 Model Context Protocol (MCP) is an open standard for connecting AI models to external tools and data sources. Sage exposes 24 MCP tools for CRM operations, extraction, and intelligence.
@@ -38,7 +40,7 @@ Model Context Protocol (MCP) is an open standard for connecting AI models to ext
 • Passive listening — no wake words, no commands
 • Auto-extraction — contacts, deals, follow-ups, sentiment, buying signals
 • Proactive insights — "You haven't followed up with Acme in 20 days"
-• CRM sync — one-way sync to Salesforce, HubSpot, Pipedrive, or local SQLite
+• CRM sync — Salesforce, HubSpot, Pipedrive, or a local SQLite CRM
 • Visual pipeline — deal boards, stuck-deal alerts, sentiment trends on Echo Show
 • 24 MCP tools — full agentic loop: listen → extract → reason → act → sync
 
