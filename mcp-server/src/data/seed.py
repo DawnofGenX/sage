@@ -10,31 +10,46 @@ from data.db import Database
 
 
 def load_json(filename: str) -> list:
-    """Load a JSON file from the data directory.
+    """Load a JSON file from the seed-data directory.
 
-    Seed data lives at `<repo>/mcp-server/data/` — one tracked copy, inside the
-    Docker image's build context (`build: ./mcp-server`), so the container and
-    a checkout resolve the same bytes.
+    Resolution order matters, because the two environments store the data
+    differently:
 
-    The previous implementation resolved `<src/data>/../../../data` (the repo
-    root), which worked from a checkout but resolved to `/data` inside the
-    image and raised FileNotFoundError during the build-time seed — leaving the
-    container with an empty database while the test suite still passed.
+    1. `<repo>/mcp-server/data/` — a checkout, and where tests run.
+    2. `/app/seed-data/` — the Docker image. The seed data is deliberately NOT
+       copied to `/app/data`, because that is where the `sage-data` volume
+       mounts: a named volume replaces the image's directory at runtime, so
+       anything baked into `/app/data` is masked and unreachable once the
+       container starts. Seeding used to happen at build time, when the volume
+       did not exist yet, which is the only reason this worked before.
+
+    The first existing candidate wins; if none exist, the error names every
+    path that was tried rather than a single misleading one.
     """
     src_data_dir = os.path.dirname(__file__)
-    # src/data/seed.py -> mcp-server/data/
-    data_dir = os.path.join(src_data_dir, "..", "..", "data")
 
-    filepath = os.path.abspath(os.path.join(data_dir, filename))
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(
-            f"Seed data {filename!r} not found at {filepath}. Expected the file "
-            "at mcp-server/data/ (the Docker build context and the checkout both "
-            "resolve this path)."
-        )
+    candidates = [
+        # A checkout: src/data/seed.py -> mcp-server/data/
+        os.path.join(src_data_dir, "..", "..", "data"),
+        # The image: /app/src/data/seed.py -> /app/seed-data/
+        os.path.join(src_data_dir, "..", "..", "seed-data"),
+        # CWD fallback, for `python -m src.data.seed` from the package root.
+        os.path.join(os.getcwd(), "data"),
+        os.path.join(os.getcwd(), "seed-data"),
+    ]
 
-    with open(filepath, "r") as f:
-        return json.load(f)
+    for data_dir in candidates:
+        filepath = os.path.abspath(os.path.join(data_dir, filename))
+        if os.path.exists(filepath):
+            with open(filepath, "r") as f:
+                return json.load(f)
+
+    searched = "\n  ".join(
+        os.path.abspath(os.path.join(d, filename)) for d in candidates
+    )
+    raise FileNotFoundError(
+        f"Seed data {filename!r} not found. Searched:\n  {searched}"
+    )
 
 
 def seed(db: Database) -> dict:

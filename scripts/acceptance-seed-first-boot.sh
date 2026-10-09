@@ -35,10 +35,16 @@ count_sql() {
 import sqlite3, sys
 c = sqlite3.connect('/app/data/sage.db')
 try:
-    print(c.execute('$1').fetchone()[0])
+    print(c.execute('''$1''').fetchone()[0])
 except Exception as e:
     print('ERR', e)
 "
+}
+
+# Like count_sql, but the caller writes raw Python — used where a SQL literal
+# would nest single quotes inside this script's own quoting.
+count_py() {
+    docker exec sage-mcp-server-1 python -c "$1" 2>&1 | tail -1
 }
 
 echo "=== building ==="
@@ -96,11 +102,11 @@ curl -s -X POST localhost:8000/api/tools/create_contact \
   -H 'Content-Type: application/json' \
   -d '{"name": "Acceptance Probe Operator", "company": "Real Co"}' >/dev/null
 
-BEFORE=$(count_sql "SELECT COUNT(*) FROM contacts WHERE name='Acceptance Probe Operator'")
+BEFORE=$(count_py "import sqlite3; c=sqlite3.connect('/app/data/sage.db'); print(c.execute(\"SELECT COUNT(*) FROM contacts WHERE name='Acceptance Probe Operator'\").fetchone()[0])")
 docker compose restart mcp-server >/dev/null 2>&1
 sleep 12
 
-AFTER=$(count_sql "SELECT COUNT(*) FROM contacts WHERE name='Acceptance Probe Operator'")
+AFTER=$(count_py "import sqlite3; c=sqlite3.connect('/app/data/sage.db'); print(c.execute(\"SELECT COUNT(*) FROM contacts WHERE name='Acceptance Probe Operator'\").fetchone()[0])")
 echo "operator row before=$BEFORE after=$AFTER"
 [ "$BEFORE" = "1" ] && [ "$AFTER" = "1" ] \
   && pass "operator row survived restart" \

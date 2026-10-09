@@ -9,12 +9,17 @@ COPY pyproject.toml ./
 # suite has (see the comment block in requirements.txt and the README). src/ is
 # copied BEFORE the editable install because egg_info inspects it at build time.
 COPY src/ ./src/
-# Seed data lives at the REPO ROOT (`<repo>/data/`). The compose build context
-# is `./mcp-server`, so this COPY pulls it in as `<root>/mcp-server/data/`.
-# `src/data/seed.py` resolves both that and the `<repo>/data` layout; the old
-# `<src/data>/../../../data` path resolved to `/data` inside the image and
-# raised FileNotFoundError, leaving the container with an empty database.
-COPY data/ ./data/
+# Seed data is copied to /app/seed-data, NOT /app/data.
+#
+# /app/data is where the sage-data volume mounts, and a named volume replaces
+# the image's directory at runtime — the JSON baked into the image is masked by
+# the volume's contents. That is invisible at build time (the build-time seed
+# used to work) and fatal at runtime, when the entrypoint's seed runs after the
+# mount is in place: FileNotFoundError, no seed, and the demo surfaces empty.
+#
+# A directory outside the mount is reachable in every environment: the seed
+# data is static, part of the image, and never user data.
+COPY data/ ./seed-data/
 
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir -e . --no-deps
