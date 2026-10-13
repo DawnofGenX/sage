@@ -89,3 +89,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT
+
+More writing on this stack: https://dev.to/dawnofgenx
